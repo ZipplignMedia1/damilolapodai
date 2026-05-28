@@ -12,14 +12,14 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Create Video — DAMILOLAPOD AI" },
-      { name: "description", content: "Generate AI videos from text prompts or images. Powered by JSON2Video." },
+      { name: "description", content: "Animate images into AI videos with a motion prompt. Powered by Lovable." },
     ],
   }),
   component: CreatePage,
 });
 
-type Ratio = "16:9" | "9:16" | "1:1" | "4:3" | "3:4";
-type Duration = 5 | 8;
+type Ratio = "16:9" | "9:16" | "1:1";
+type Duration = 5 | 10;
 
 
 function CreatePage() {
@@ -29,7 +29,7 @@ function CreatePage() {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const [prompt, setPrompt] = useState("");
   const [ratio, setRatio] = useState<Ratio>("16:9");
-  const [duration, setDuration] = useState<Duration>(8);
+  const [duration, setDuration] = useState<Duration>(5);
 
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -52,7 +52,7 @@ function CreatePage() {
     if (!prompt.trim()) return toast.error("Please describe the motion");
     if (!imageDataUrl) return toast.error("Please upload an image");
     setSubmitting(true);
-    const toastId = toast.loading("Uploading image…");
+    const toastId = toast.loading("Submitting…");
     try {
       const result = await startGeneration({
         data: {
@@ -68,7 +68,7 @@ function CreatePage() {
       const startedAt = Date.now();
       while (Date.now() - startedAt < 10 * 60 * 1000) {
         await new Promise((resolve) => window.setTimeout(resolve, 7000));
-        const status = await checkVideoStatus({ data: { projectId: result.projectId } });
+        const status = await checkVideoStatus({ data: { requestId: result.requestId } });
         if (status.status === "failed") throw new Error(status.error);
         if (status.status === "done") {
           videoUrl = status.videoUrl;
@@ -176,7 +176,7 @@ function CreatePage() {
           <><Wand2 className="h-5 w-5" /> Generate Video</>
         )}
       </Button>
-      <p className="text-center text-xs text-muted-foreground">Powered by JSON2Video · 1–3 minutes</p>
+      <p className="text-center text-xs text-muted-foreground">Kling 2.1 · ~2–4 minutes</p>
     </div>
   );
 }
