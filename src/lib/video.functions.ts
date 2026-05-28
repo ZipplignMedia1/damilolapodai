@@ -84,16 +84,21 @@ export const generateVideo = createServerFn({ method: "POST" })
       const text = await submitRes.text();
       throw new Error(`JSON2Video submit failed [${submitRes.status}]: ${text.slice(0, 400)}`);
     }
-    const submitted = (await submitRes.json()) as {
-      success?: boolean;
-      project?: string;
-      message?: string;
-    };
-    if (!submitted.success || !submitted.project) {
-      throw new Error(`JSON2Video submit error: ${submitted.message ?? "no project id"}`);
+    const submitted = (await submitRes.json()) as Record<string, any>;
+    const projectId: string | undefined =
+      submitted.project ??
+      submitted.project_id ??
+      submitted.projectId ??
+      submitted.id ??
+      submitted?.movie?.project ??
+      submitted?.data?.project;
+    if (!projectId) {
+      throw new Error(
+        `JSON2Video submit error: ${submitted.message ?? JSON.stringify(submitted).slice(0, 300)}`,
+      );
     }
 
-    return { projectId: submitted.project };
+    return { projectId };
   });
 
 export const getVideoStatus = createServerFn({ method: "POST" })
