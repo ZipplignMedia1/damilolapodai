@@ -10,6 +10,10 @@ const InputSchema = z.object({
   imageDataUrl: z.string().max(15_000_000).optional(),
 });
 
+const StatusInputSchema = z.object({
+  projectId: z.string().min(1).max(200),
+});
+
 // JSON2Video uses width x height. Map common ratios to 1080p-ish dimensions.
 function mapDimensions(r: string): { width: number; height: number } {
   switch (r) {
@@ -22,11 +26,16 @@ function mapDimensions(r: string): { width: number; height: number } {
   }
 }
 
+function getJson2VideoKey() {
+  const key = process.env.JSON2VIDEO_API_KEY;
+  if (!key) throw new Error("JSON2VIDEO_API_KEY is not configured");
+  return key;
+}
+
 export const generateVideo = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => InputSchema.parse(data))
   .handler(async ({ data }) => {
-    const key = process.env.JSON2VIDEO_API_KEY;
-    if (!key) throw new Error("JSON2VIDEO_API_KEY is not configured");
+    const key = getJson2VideoKey();
 
     const { width, height } = mapDimensions(data.aspectRatio);
 
@@ -84,32 +93,39 @@ export const generateVideo = createServerFn({ method: "POST" })
       throw new Error(`JSON2Video submit error: ${submitted.message ?? "no project id"}`);
     }
 
-    // Poll for up to ~5 minutes
-    const start = Date.now();
-    const timeoutMs = 5 * 60 * 1000;
-    while (Date.now() - start < timeoutMs) {
-      await new Promise((r) => setTimeout(r, 6000));
-      const statusRes = await fetch(
-        `https://api.json2video.com/v2/movies?project=${encodeURIComponent(submitted.project)}`,
-        { headers: { "x-api-key": key } },
-      );
-      if (!statusRes.ok) continue;
-      const status = (await statusRes.json()) as {
-        success?: boolean;
-        movie?: {
-          status?: string;
-          url?: string;
-          message?: string;
-        };
-      };
-      const m = status.movie;
-      if (!m) continue;
-      if (m.status === "error") {
-        throw new Error(`JSON2Video generation failed: ${m.message ?? "unknown"}`);
-      }
-      if (m.status === "done" && m.url) {
-        return { videoUrl: m.url };
-      }
+    return { projectId: submitted.project };
+  });
+
+export const getVideoStatus = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => StatusInputSchema.parse(data))
+  .handler(async ({ data }) => {
+    const key = getJson2VideoKey();
+    const statusRes = await fetch(
+      `https://api.json2video.com/v2/movies?project=${encodeURIComponent(data.projectId)}`,
+      { headers: { "x-api-key": key } },
+    );
+    if (!statusRes.ok) {
+      const text = await statusRes.text();
+      throw new Error(`JSON2Video status failed [${statusRes.status}]: ${text.slice(0, 400)}`);
     }
-    throw new Error("Generation timed out after 5 minutes");
+    const status = (await statusRes.json()) as {
+      success?: boolean;
+      movie?: {
+        status?: string;
+        url?: string;
+        message?: string;
+      };
+      message?: string;
+    };
+    const movie = status.movie;
+    if (!status.success || !movie) {
+      return { status: "processing" as const };
+    }
+    if (movie.status === "error") {
+      return { status: "failed" as const, error: movie.message ?? "Video generation failed" };
+    }
+    if (movie.status === "done" && movie.url) {
+      return { status: "done" as const, videoUrl: movie.url };
+    }
+    return { status: "processing" as const };
   });
