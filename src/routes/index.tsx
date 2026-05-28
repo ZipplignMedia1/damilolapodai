@@ -36,7 +36,7 @@ function CreatePage() {
   const [negative, setNegative] = useState("");
   const [ratio, setRatio] = useState<Ratio>("16:9");
   const [duration, setDuration] = useState<Duration>(8);
-  const [advancedOpen, setAdvancedOpen] = useState(true);
+  
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -141,70 +141,6 @@ function CreatePage() {
           />
         </div>
 
-        {/* Advanced */}
-        <button
-          onClick={() => setAdvancedOpen(v => !v)}
-          className="mt-5 flex w-full items-center gap-2 text-left text-sm font-semibold text-foreground"
-        >
-          <SlidersHorizontal className="h-4 w-4" />
-          Advanced Settings
-          {advancedOpen ? <ChevronUp className="h-4 w-4 ml-auto" /> : <ChevronDown className="h-4 w-4 ml-auto" />}
-        </button>
-
-        {advancedOpen && (
-          <div className="mt-3 space-y-5 rounded-xl border border-border bg-muted/30 p-4">
-            {/* Aspect Ratio */}
-            <div>
-              <p className="text-sm font-semibold">Aspect Ratio</p>
-              <div className="mt-3 grid grid-cols-3 gap-2.5">
-                {RATIOS.map(r => {
-                  const active = ratio === r.value;
-                  return (
-                    <button
-                      key={r.value}
-                      onClick={() => setRatio(r.value)}
-                      className={`flex flex-col items-center rounded-xl border px-3 py-2.5 transition ${active ? "border-primary bg-primary text-primary-foreground shadow-sm" : "border-border bg-card text-foreground hover:border-primary/50"}`}
-                    >
-                      <span className="text-base font-bold leading-tight">{r.label}</span>
-                      <span className={`text-[11px] ${active ? "text-primary-foreground/85" : "text-muted-foreground"}`}>{r.sub}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Duration */}
-            <div>
-              <p className="text-sm font-semibold">Duration</p>
-              <div className="mt-3 flex gap-2.5">
-                {([5, 8] as Duration[]).map(d => {
-                  const active = duration === d;
-                  return (
-                    <button
-                      key={d}
-                      onClick={() => setDuration(d)}
-                      className={`flex-1 max-w-24 rounded-xl border py-3 text-sm font-bold transition ${active ? "border-primary bg-primary text-primary-foreground shadow-sm" : "border-border bg-card text-foreground hover:border-primary/50"}`}
-                    >
-                      {d}s
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Negative prompt */}
-            <div>
-              <p className="text-sm font-semibold">Negative Prompt</p>
-              <p className="text-xs text-muted-foreground">What to avoid in the video</p>
-              <input
-                value={negative}
-                onChange={(e) => setNegative(e.target.value)}
-                placeholder="blurry, low quality, distorted..."
-                className="mt-2 w-full rounded-xl border border-border bg-card px-3 py-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
-            </div>
-          </div>
-        )}
       </div>
 
       <Button
