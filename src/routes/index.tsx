@@ -21,13 +21,6 @@ type Mode = "text" | "image";
 type Ratio = "16:9" | "9:16" | "1:1" | "4:3" | "3:4";
 type Duration = 5 | 8;
 
-const RATIOS: { value: Ratio; label: string; sub: string }[] = [
-  { value: "16:9", label: "16:9", sub: "Landscape" },
-  { value: "9:16", label: "9:16", sub: "Portrait" },
-  { value: "1:1", label: "1:1", sub: "Square" },
-  { value: "4:3", label: "4:3", sub: "Standard" },
-  { value: "3:4", label: "3:4", sub: "Photo" },
-];
 
 function CreatePage() {
   const navigate = useNavigate();
