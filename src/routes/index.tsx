@@ -49,19 +49,17 @@ function CreatePage() {
   }
 
   async function handleGenerate() {
-    if (!prompt.trim()) return toast.error("Please describe your video");
-    if (mode === "image" && !imageDataUrl) return toast.error("Please upload an image");
+    if (!prompt.trim()) return toast.error("Please describe the motion");
+    if (!imageDataUrl) return toast.error("Please upload an image");
     setSubmitting(true);
-    const toastId = toast.loading("Submitting to JSON2Video…");
+    const toastId = toast.loading("Uploading image…");
     try {
       const result = await startGeneration({
         data: {
-          mode,
           prompt: prompt.trim(),
-          negativePrompt: negative.trim() || undefined,
           aspectRatio: ratio,
           duration,
-          imageDataUrl: mode === "image" ? imageDataUrl ?? undefined : undefined,
+          imageDataUrl,
         },
       });
       toast.loading("Rendering video… this can take a few minutes.", { id: toastId });
@@ -83,7 +81,10 @@ function CreatePage() {
       addToHistory({
         id: crypto.randomUUID(),
         createdAt: Date.now(),
-        mode, prompt, negativePrompt: negative, aspectRatio: ratio, duration,
+        mode: "image",
+        prompt,
+        aspectRatio: ratio,
+        duration,
         videoUrl,
         thumbnail: imageDataUrl ?? undefined,
       });
