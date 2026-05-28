@@ -4,8 +4,9 @@ import { Sparkles, Upload, Wand2, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { generateVideo } from "@/lib/video.functions";
+import { generateVideo, getVideoStatus } from "@/lib/video.functions";
 import { addToHistory } from "@/lib/history";
+import { useServerFn } from "@tanstack/react-start";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -24,6 +25,8 @@ type Duration = 5 | 8;
 
 function CreatePage() {
   const navigate = useNavigate();
+  const startGeneration = useServerFn(generateVideo);
+  const checkVideoStatus = useServerFn(getVideoStatus);
   const [mode, setMode] = useState<Mode>("text");
   const [prompt, setPrompt] = useState("");
   const [negative, setNegative] = useState("");
@@ -47,9 +50,9 @@ function CreatePage() {
     if (!prompt.trim()) return toast.error("Please describe your video");
     if (mode === "image" && !imageDataUrl) return toast.error("Please upload an image");
     setSubmitting(true);
-    const toastId = toast.loading("Submitting to Veo 3… this can take a few minutes.");
+    const toastId = toast.loading("Submitting to JSON2Video…");
     try {
-      const result = await generateVideo({
+      const result = await startGeneration({
         data: {
           mode,
           prompt: prompt.trim(),
@@ -59,11 +62,27 @@ function CreatePage() {
           imageDataUrl: mode === "image" ? imageDataUrl ?? undefined : undefined,
         },
       });
+      toast.loading("Rendering video… this can take a few minutes.", { id: toastId });
+
+      let videoUrl: string | undefined;
+      const startedAt = Date.now();
+      while (Date.now() - startedAt < 10 * 60 * 1000) {
+        await new Promise((resolve) => window.setTimeout(resolve, 7000));
+        const status = await checkVideoStatus({ data: { projectId: result.projectId } });
+        if (status.status === "failed") throw new Error(status.error);
+        if (status.status === "done") {
+          videoUrl = status.videoUrl;
+          break;
+        }
+      }
+
+      if (!videoUrl) throw new Error("Video is still processing. Please try again in a few minutes.");
+
       addToHistory({
         id: crypto.randomUUID(),
         createdAt: Date.now(),
         mode, prompt, negativePrompt: negative, aspectRatio: ratio, duration,
-        videoUrl: result.videoUrl,
+        videoUrl,
         thumbnail: imageDataUrl ?? undefined,
       });
       toast.success("Video ready!", { id: toastId });
@@ -147,7 +166,7 @@ function CreatePage() {
           <><Wand2 className="h-5 w-5" /> Generate Video</>
         )}
       </Button>
-      <p className="text-center text-xs text-muted-foreground">Powered by Google Veo 3 via fal.ai · 1–3 minutes</p>
+      <p className="text-center text-xs text-muted-foreground">Powered by JSON2Video · 1–3 minutes</p>
     </div>
   );
 }
