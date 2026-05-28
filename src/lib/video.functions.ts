@@ -10,87 +10,105 @@ const InputSchema = z.object({
   imageDataUrl: z.string().max(15_000_000).optional(),
 });
 
-// Veo 3 via Gemini API supports 16:9 and 9:16
-function mapRatio(r: string): "16:9" | "9:16" {
-  if (r === "9:16" || r === "3:4") return "9:16";
-  return "16:9";
-}
-
-function parseDataUrl(dataUrl: string): { mimeType: string; base64: string } {
-  const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
-  if (!match) throw new Error("Invalid image data URL");
-  return { mimeType: match[1], base64: match[2] };
+// JSON2Video uses width x height. Map common ratios to 1080p-ish dimensions.
+function mapDimensions(r: string): { width: number; height: number } {
+  switch (r) {
+    case "9:16": return { width: 1080, height: 1920 };
+    case "1:1":  return { width: 1080, height: 1080 };
+    case "4:3":  return { width: 1440, height: 1080 };
+    case "3:4":  return { width: 1080, height: 1440 };
+    case "16:9":
+    default:     return { width: 1920, height: 1080 };
+  }
 }
 
 export const generateVideo = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => InputSchema.parse(data))
   .handler(async ({ data }) => {
-    const key = process.env.GEMINI_API_KEY;
-    if (!key) throw new Error("GEMINI_API_KEY is not configured");
+    const key = process.env.JSON2VIDEO_API_KEY;
+    if (!key) throw new Error("JSON2VIDEO_API_KEY is not configured");
 
-    const model = "veo-2.0-generate-001";
-    const base = "https://generativelanguage.googleapis.com/v1beta";
+    const { width, height } = mapDimensions(data.aspectRatio);
 
-    const instance: Record<string, unknown> = { prompt: data.prompt };
-    if (data.mode === "image" && data.imageDataUrl) {
-      const { mimeType, base64 } = parseDataUrl(data.imageDataUrl);
-      instance.image = { bytesBase64Encoded: base64, mimeType };
-    }
+    // Build a single-scene movie. For image mode we animate the uploaded image
+    // with a Ken-Burns zoom; for text mode we generate via the AI video element.
+    const element =
+      data.mode === "image" && data.imageDataUrl
+        ? {
+            type: "image",
+            src: data.imageDataUrl,
+            duration: data.duration,
+            zoom: 2,
+            "pan-distance": 0.1,
+          }
+        : {
+            type: "ai-video",
+            prompt: data.prompt,
+            duration: data.duration,
+            model: "kling-2.1",
+            aspectRatio: data.aspectRatio,
+          };
 
-    const parameters: Record<string, unknown> = {
-      aspectRatio: mapRatio(data.aspectRatio),
-      durationSeconds: data.duration,
+    const movie = {
+      resolution: "custom",
+      width,
+      height,
+      quality: "high",
+      scenes: [
+        {
+          duration: data.duration,
+          elements: [element],
+        },
+      ],
     };
-    if (data.negativePrompt) parameters.negativePrompt = data.negativePrompt;
 
-    const submitRes = await fetch(`${base}/models/${model}:predictLongRunning`, {
+    const submitRes = await fetch("https://api.json2video.com/v2/movies", {
       method: "POST",
       headers: {
-        "x-goog-api-key": key,
+        "x-api-key": key,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ instances: [instance], parameters }),
+      body: JSON.stringify(movie),
     });
     if (!submitRes.ok) {
       const text = await submitRes.text();
-      throw new Error(`Gemini submit failed [${submitRes.status}]: ${text.slice(0, 400)}`);
+      throw new Error(`JSON2Video submit failed [${submitRes.status}]: ${text.slice(0, 400)}`);
     }
-    const submitted = (await submitRes.json()) as { name?: string };
-    if (!submitted.name) throw new Error("Gemini did not return an operation name");
+    const submitted = (await submitRes.json()) as {
+      success?: boolean;
+      project?: string;
+      message?: string;
+    };
+    if (!submitted.success || !submitted.project) {
+      throw new Error(`JSON2Video submit error: ${submitted.message ?? "no project id"}`);
+    }
 
-    // Poll up to ~5 minutes
+    // Poll for up to ~5 minutes
     const start = Date.now();
     const timeoutMs = 5 * 60 * 1000;
     while (Date.now() - start < timeoutMs) {
-      await new Promise((r) => setTimeout(r, 8000));
-      const opRes = await fetch(`${base}/${submitted.name}`, {
-        headers: { "x-goog-api-key": key },
-      });
-      if (!opRes.ok) continue;
-      const op = (await opRes.json()) as {
-        done?: boolean;
-        error?: { message?: string };
-        response?: {
-          generateVideoResponse?: {
-            generatedSamples?: Array<{ video?: { uri?: string } }>;
-          };
+      await new Promise((r) => setTimeout(r, 6000));
+      const statusRes = await fetch(
+        `https://api.json2video.com/v2/movies?project=${encodeURIComponent(submitted.project)}`,
+        { headers: { "x-api-key": key } },
+      );
+      if (!statusRes.ok) continue;
+      const status = (await statusRes.json()) as {
+        success?: boolean;
+        movie?: {
+          status?: string;
+          url?: string;
+          message?: string;
         };
       };
-      if (op.error) throw new Error(`Gemini generation failed: ${op.error.message ?? "unknown"}`);
-      if (!op.done) continue;
-
-      const uri = op.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri;
-      if (!uri) throw new Error("No video URI in Gemini response");
-
-      // Download video bytes (URI requires API key) and return as data URL
-      const sep = uri.includes("?") ? "&" : "?";
-      const videoRes = await fetch(`${uri}${sep}key=${key}`);
-      if (!videoRes.ok) throw new Error(`Video download failed: ${videoRes.status}`);
-      const buf = new Uint8Array(await videoRes.arrayBuffer());
-      let binary = "";
-      for (let i = 0; i < buf.length; i++) binary += String.fromCharCode(buf[i]);
-      const b64 = btoa(binary);
-      return { videoUrl: `data:video/mp4;base64,${b64}` };
+      const m = status.movie;
+      if (!m) continue;
+      if (m.status === "error") {
+        throw new Error(`JSON2Video generation failed: ${m.message ?? "unknown"}`);
+      }
+      if (m.status === "done" && m.url) {
+        return { videoUrl: m.url };
+      }
     }
     throw new Error("Generation timed out after 5 minutes");
   });
