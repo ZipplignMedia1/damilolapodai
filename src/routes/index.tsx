@@ -108,75 +108,57 @@ function CreatePage() {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="mt-5 grid grid-cols-2 border-b border-border">
-          {(["text", "image"] as const).map((m) => (
-            <button
-              key={m}
-              onClick={() => setMode(m)}
-              className={`relative pb-3 text-sm font-semibold transition-colors ${mode === m ? "text-foreground" : "text-muted-foreground"}`}
+        {/* Image picker */}
+        <div className="mt-5">
+          <label className="text-sm font-semibold">Upload an image</label>
+          {imageDataUrl ? (
+            <div className="relative mt-2 overflow-hidden rounded-xl border border-border">
+              <img src={imageDataUrl} alt="upload" className="w-full object-cover max-h-64" />
+              <button onClick={() => setImageDataUrl(null)} className="absolute top-2 right-2 rounded-full bg-foreground/70 p-1.5 text-background backdrop-blur">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => imageInputRef.current?.click()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") imageInputRef.current?.click();
+              }}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                const file = e.dataTransfer.files?.[0];
+                if (file) handleImagePick(file);
+              }}
+              className="relative mt-2 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-muted/40 px-4 py-10 cursor-pointer hover:bg-muted transition focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
-              {m === "text" ? "Text to Video" : "Image to Video"}
-              {mode === m && <span className="absolute inset-x-0 -bottom-px h-0.5 bg-primary rounded-full" />}
-            </button>
-          ))}
-        </div>
-
-        {/* Image picker (image mode) */}
-        {mode === "image" && (
-          <div className="mt-5">
-            <label className="text-sm font-semibold">Upload an image</label>
-            {imageDataUrl ? (
-              <div className="relative mt-2 overflow-hidden rounded-xl border border-border">
-                <img src={imageDataUrl} alt="upload" className="w-full object-cover max-h-64" />
-                <button onClick={() => setImageDataUrl(null)} className="absolute top-2 right-2 rounded-full bg-foreground/70 p-1.5 text-background backdrop-blur">
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            ) : (
-              <div
-                role="button"
-                tabIndex={0}
-                onClick={() => imageInputRef.current?.click()}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") imageInputRef.current?.click();
-                }}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  const file = e.dataTransfer.files?.[0];
+              <Upload className="h-6 w-6 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Tap to upload an image</span>
+              <span className="text-xs text-muted-foreground">JPG, PNG, or WebP · max 8MB</span>
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/*"
+                className="sr-only"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
                   if (file) handleImagePick(file);
+                  e.currentTarget.value = "";
                 }}
-                className="relative mt-2 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-muted/40 px-4 py-10 cursor-pointer hover:bg-muted transition focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                <Upload className="h-6 w-6 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Tap to upload an image</span>
-                <span className="text-xs text-muted-foreground">JPG, PNG, or WebP · max 8MB</span>
-                <input
-                  ref={imageInputRef}
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp,image/*"
-                  className="sr-only"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleImagePick(file);
-                    e.currentTarget.value = "";
-                  }}
-                />
-              </div>
-            )}
-          </div>
-        )}
+              />
+            </div>
+          )}
+        </div>
 
         {/* Prompt */}
         <div className="mt-5">
-          <label className="text-sm font-semibold">
-            {mode === "text" ? "Describe your video" : "Describe the motion"}
-          </label>
+          <label className="text-sm font-semibold">Describe the motion</label>
           <Textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder={mode === "text" ? "A serene ocean sunset with gentle waves..." : "Camera slowly zooms in, leaves sway in the wind..."}
+            placeholder="Camera slowly zooms in, leaves sway in the wind..."
             className="mt-2 min-h-[110px] resize-none rounded-xl border-border bg-background text-base"
           />
         </div>
