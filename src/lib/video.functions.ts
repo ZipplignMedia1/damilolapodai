@@ -39,6 +39,7 @@ export const generateVideo = createServerFn({ method: "POST" })
 
     const parameters: Record<string, unknown> = {
       aspectRatio: mapRatio(data.aspectRatio),
+      durationSeconds: data.duration,
     };
     if (data.negativePrompt) parameters.negativePrompt = data.negativePrompt;
 
