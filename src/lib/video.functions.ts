@@ -28,7 +28,7 @@ export const generateVideo = createServerFn({ method: "POST" })
     const key = process.env.GEMINI_API_KEY;
     if (!key) throw new Error("GEMINI_API_KEY is not configured");
 
-    const model = "veo-3.0-generate-001";
+    const model = "veo-2.0-generate-001";
     const base = "https://generativelanguage.googleapis.com/v1beta";
 
     const instance: Record<string, unknown> = { prompt: data.prompt };
