@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Sparkles, SlidersHorizontal, ChevronUp, ChevronDown, Upload, Wand2, Loader2, X } from "lucide-react";
+import { Sparkles, Upload, Wand2, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
