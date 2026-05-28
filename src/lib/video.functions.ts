@@ -46,7 +46,6 @@ export const generateVideo = createServerFn({ method: "POST" })
             prompt: data.prompt,
             duration: data.duration,
             model: "kling-2.1",
-            aspectRatio: data.aspectRatio,
           };
 
     const movie = {
