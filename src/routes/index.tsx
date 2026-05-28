@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Sparkles, Upload, Wand2, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ function CreatePage() {
   const navigate = useNavigate();
   const startGeneration = useServerFn(generateVideo);
   const checkVideoStatus = useServerFn(getVideoStatus);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<Mode>("text");
   const [prompt, setPrompt] = useState("");
   const [negative, setNegative] = useState("");
@@ -37,6 +38,10 @@ function CreatePage() {
   const [submitting, setSubmitting] = useState(false);
 
   function handleImagePick(file: File) {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file");
+      return;
+    }
     if (file.size > 8 * 1024 * 1024) {
       toast.error("Image must be under 8MB");
       return;
@@ -131,11 +136,36 @@ function CreatePage() {
                 </button>
               </div>
             ) : (
-              <label className="mt-2 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-muted/40 px-4 py-10 cursor-pointer hover:bg-muted transition">
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => imageInputRef.current?.click()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") imageInputRef.current?.click();
+                }}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const file = e.dataTransfer.files?.[0];
+                  if (file) handleImagePick(file);
+                }}
+                className="relative mt-2 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-muted/40 px-4 py-10 cursor-pointer hover:bg-muted transition focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
                 <Upload className="h-6 w-6 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Tap to upload an image</span>
-                <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleImagePick(e.target.files[0])} />
-              </label>
+                <span className="text-xs text-muted-foreground">JPG, PNG, or WebP · max 8MB</span>
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/*"
+                  className="sr-only"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleImagePick(file);
+                    e.currentTarget.value = "";
+                  }}
+                />
+              </div>
             )}
           </div>
         )}
