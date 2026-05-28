@@ -67,7 +67,7 @@ async function uploadImageToJson2Video(key: string, dataUrl: string): Promise<st
   const putRes = await fetch(presigned.uploadUrl, {
     method: "PUT",
     headers: { "Content-Type": contentType },
-    body: bytes,
+    body: bytes as BodyInit,
   });
   if (!putRes.ok) {
     const t = await putRes.text();
