@@ -31,7 +31,8 @@ export const generateVideo = createServerFn({ method: "POST" })
     const { width, height } = mapDimensions(data.aspectRatio);
 
     // Build a single-scene movie. For image mode we animate the uploaded image
-    // with a Ken-Burns zoom; for text mode we generate via the AI video element.
+    // with a Ken-Burns zoom; for text mode JSON2Video generates AI video via
+    // the regular video element plus a video-capable model.
     const element =
       data.mode === "image" && data.imageDataUrl
         ? {
@@ -42,10 +43,11 @@ export const generateVideo = createServerFn({ method: "POST" })
             "pan-distance": 0.1,
           }
         : {
-            type: "ai-video",
+            type: "video",
             prompt: data.prompt,
             duration: data.duration,
-            model: "kling-2.1",
+            model: "seedance-v1.5-pro",
+            resize: "fill",
           };
 
     const movie = {
