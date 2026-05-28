@@ -12,7 +12,7 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Create Video — DAMILOLAPOD AI" },
-      { name: "description", content: "Generate AI videos from text prompts or images. Powered by Veo 3." },
+      { name: "description", content: "Generate AI videos from text prompts or images. Powered by JSON2Video." },
     ],
   }),
   component: CreatePage,
