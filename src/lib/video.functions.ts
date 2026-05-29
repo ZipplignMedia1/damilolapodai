@@ -1,9 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-const KIE_BASE = "https://api.kie.ai/api/v1";
-const KIE_UPLOAD = "https://kieai.redpandaai.co/api/file-base64-upload";
-const MODEL = "veo3_fast"; // Veo 3.1 Fast — native audio, image-to-video
+// fal.ai queue API. Free credits on signup, no kie billing.
+// Pipeline: Kling (silent image-to-video) → MMAudio v2 (synced audio).
+const FAL_QUEUE = "https://queue.fal.run";
+const KLING_MODEL = "fal-ai/kling-video/v1.6/standard/image-to-video";
+const MMAUDIO_MODEL = "fal-ai/mmaudio-v2";
 
 const InputSchema = z.object({
   prompt: z.string().min(1).max(2000),
@@ -13,35 +15,75 @@ const InputSchema = z.object({
 });
 
 const StatusInputSchema = z.object({
-  requestId: z.string().min(1).max(200),
+  requestId: z.string().min(1).max(4000),
 });
 
 function getKey() {
-  const key = process.env.KIE_API_KEY;
-  if (!key) throw new Error("KIE_API_KEY is not configured");
+  const key = process.env.FAL_KEY;
+  if (!key) throw new Error("FAL_KEY is not configured");
   return key;
 }
 
-async function uploadImage(dataUrl: string, key: string): Promise<string> {
-  const res = await fetch(KIE_UPLOAD, {
+function authHeaders(key: string) {
+  return {
+    Authorization: `Key ${key}`,
+    "Content-Type": "application/json",
+  };
+}
+
+// Encode pipeline state into the requestId so the client only tracks one string.
+// Format: "<stage>|<falId>|<duration>|<promptB64>"
+function encodeState(stage: "kling" | "mmaudio", falId: string, duration: number, prompt: string) {
+  const b64 = btoa(unescape(encodeURIComponent(prompt))).replace(/=+$/, "");
+  return `${stage}|${falId}|${duration}|${b64}`;
+}
+
+function decodeState(s: string) {
+  const [stage, falId, dur, b64] = s.split("|");
+  if (!stage || !falId) throw new Error("Invalid requestId");
+  const prompt = b64
+    ? decodeURIComponent(escape(atob(b64 + "==".slice((b64.length + 2) % 4))))
+    : "";
+  return { stage: stage as "kling" | "mmaudio", falId, duration: Number(dur) || 5, prompt };
+}
+
+async function falSubmit(model: string, input: unknown, key: string): Promise<string> {
+  const res = await fetch(`${FAL_QUEUE}/${model}`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      base64Data: dataUrl,
-      uploadPath: "images/user-uploads",
-    }),
+    headers: authHeaders(key),
+    body: JSON.stringify(input),
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Image upload failed [${res.status}]: ${text.slice(0, 300)}`);
+    throw new Error(`Submit failed [${res.status}]: ${text.slice(0, 400)}`);
   }
-  const json = (await res.json()) as { data?: { downloadUrl?: string }; msg?: string };
-  const url = json.data?.downloadUrl;
-  if (!url) throw new Error(`No downloadUrl from upload: ${JSON.stringify(json).slice(0, 200)}`);
-  return url;
+  const json = (await res.json()) as { request_id?: string };
+  if (!json.request_id) throw new Error("No request_id from fal");
+  return json.request_id;
+}
+
+async function falStatus(model: string, requestId: string, key: string) {
+  const res = await fetch(
+    `${FAL_QUEUE}/${model}/requests/${encodeURIComponent(requestId)}/status`,
+    { headers: { Authorization: `Key ${key}` } },
+  );
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Status failed [${res.status}]: ${text.slice(0, 300)}`);
+  }
+  return (await res.json()) as { status: "IN_QUEUE" | "IN_PROGRESS" | "COMPLETED" | string };
+}
+
+async function falResult(model: string, requestId: string, key: string) {
+  const res = await fetch(
+    `${FAL_QUEUE}/${model}/requests/${encodeURIComponent(requestId)}`,
+    { headers: { Authorization: `Key ${key}` } },
+  );
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Result fetch failed [${res.status}]: ${text.slice(0, 300)}`);
+  }
+  return (await res.json()) as { video?: { url?: string } };
 }
 
 export const generateVideo = createServerFn({ method: "POST" })
@@ -49,82 +91,62 @@ export const generateVideo = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const key = getKey();
 
-    const imageUrl = await uploadImage(data.imageDataUrl, key);
-
-    // Veo only supports 16:9 and 9:16 natively. Map 1:1 → 9:16 as the safest fallback.
-    const aspect = data.aspectRatio === "1:1" ? "9:16" : data.aspectRatio;
-
-    const res = await fetch(`${KIE_BASE}/veo/generate`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    // Kling 1.6 standard supports image-to-video with aspect 16:9, 9:16, 1:1
+    const klingId = await falSubmit(
+      KLING_MODEL,
+      {
         prompt: data.prompt,
-        imageUrls: [imageUrl],
-        model: MODEL,
-        aspect_ratio: aspect,
-        generationType: "FIRST_AND_LAST_FRAMES_2_VIDEO",
-      }),
-    });
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Video submit failed [${res.status}]: ${text.slice(0, 400)}`);
-    }
-    const json = (await res.json()) as {
-      code?: number;
-      msg?: string;
-      data?: { taskId?: string };
-    };
-    if (json.code !== 200 || !json.data?.taskId) {
-      throw new Error(`Submit error: ${json.msg ?? JSON.stringify(json).slice(0, 200)}`);
-    }
-    return { requestId: json.data.taskId };
+        image_url: data.imageDataUrl, // fal accepts data URIs
+        duration: String(data.duration), // "5" or "10"
+        aspect_ratio: data.aspectRatio,
+      },
+      key,
+    );
+
+    return { requestId: encodeState("kling", klingId, data.duration, data.prompt) };
   });
 
 export const getVideoStatus = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => StatusInputSchema.parse(data))
   .handler(async ({ data }) => {
     const key = getKey();
-    const url = `${KIE_BASE}/veo/record-info?taskId=${encodeURIComponent(data.requestId)}`;
+    const state = decodeState(data.requestId);
 
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${key}` },
-    });
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`Video status failed [${res.status}]: ${text.slice(0, 400)}`);
-    }
-    const json = (await res.json()) as {
-      code?: number;
-      data?: {
-        successFlag?: number;
-        errorMessage?: string | null;
-        errorCode?: number | null;
-        response?: {
-          resultUrls?: string[];
-          fullResultUrls?: string[];
-        };
-      };
-    };
-
-    const flag = json.data?.successFlag;
-
-    if (flag === 1) {
-      const videoUrl =
-        json.data?.response?.resultUrls?.[0] ?? json.data?.response?.fullResultUrls?.[0];
-      if (!videoUrl) return { status: "failed" as const, error: "No video URL in result" };
-      return { status: "done" as const, videoUrl };
-    }
-
-    if (flag === 2 || flag === 3) {
+    if (state.stage === "kling") {
+      const s = await falStatus(KLING_MODEL, state.falId, key);
+      if (s.status !== "COMPLETED") {
+        return { status: "processing" as const, requestId: data.requestId };
+      }
+      const result = await falResult(KLING_MODEL, state.falId, key);
+      const silentUrl = result.video?.url;
+      if (!silentUrl) {
+        return { status: "failed" as const, error: "Kling returned no video URL" };
+      }
+      // Submit MMAudio with the silent video.
+      const audioId = await falSubmit(
+        MMAUDIO_MODEL,
+        {
+          video_url: silentUrl,
+          prompt: state.prompt,
+          duration: state.duration,
+        },
+        key,
+      );
       return {
-        status: "failed" as const,
-        error:
-          json.data?.errorMessage || (json.data?.errorCode ? `Error ${json.data.errorCode}` : "Generation failed"),
+        status: "processing" as const,
+        requestId: encodeState("mmaudio", audioId, state.duration, state.prompt),
       };
     }
 
-    return { status: "processing" as const };
+    // mmaudio stage
+    const s = await falStatus(MMAUDIO_MODEL, state.falId, key);
+    if (s.status !== "COMPLETED") {
+      return { status: "processing" as const, requestId: data.requestId };
+    }
+    const result = await falResult(MMAUDIO_MODEL, state.falId, key);
+    const finalUrl = result.video?.url;
+    if (!finalUrl) {
+      return { status: "failed" as const, error: "MMAudio returned no video URL" };
+    }
+    return { status: "done" as const, videoUrl: finalUrl };
   });
