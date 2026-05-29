@@ -3,7 +3,7 @@ import { z } from "zod";
 
 const KIE_BASE = "https://api.kie.ai/api/v1";
 const KIE_UPLOAD = "https://kieai.redpandaai.co/api/file-base64-upload";
-const MODEL = "kling/v2-1-standard";
+const MODEL = "veo3_fast"; // Veo 3.1 Fast — native audio, image-to-video
 
 const InputSchema = z.object({
   prompt: z.string().min(1).max(2000),
@@ -51,26 +51,32 @@ export const generateVideo = createServerFn({ method: "POST" })
 
     const imageUrl = await uploadImage(data.imageDataUrl, key);
 
-    const res = await fetch(`${KIE_BASE}/jobs/createTask`, {
+    // Veo only supports 16:9 and 9:16 natively. Map 1:1 → 9:16 as the safest fallback.
+    const aspect = data.aspectRatio === "1:1" ? "9:16" : data.aspectRatio;
+
+    const res = await fetch(`${KIE_BASE}/veo/generate`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${key}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        prompt: data.prompt,
+        imageUrls: [imageUrl],
         model: MODEL,
-        input: {
-          prompt: data.prompt,
-          image_url: imageUrl,
-          duration: String(data.duration),
-        },
+        aspect_ratio: aspect,
+        generationType: "FIRST_AND_LAST_FRAMES_2_VIDEO",
       }),
     });
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`Video submit failed [${res.status}]: ${text.slice(0, 400)}`);
     }
-    const json = (await res.json()) as { code?: number; msg?: string; data?: { taskId?: string } };
+    const json = (await res.json()) as {
+      code?: number;
+      msg?: string;
+      data?: { taskId?: string };
+    };
     if (json.code !== 200 || !json.data?.taskId) {
       throw new Error(`Submit error: ${json.msg ?? JSON.stringify(json).slice(0, 200)}`);
     }
@@ -81,7 +87,7 @@ export const getVideoStatus = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => StatusInputSchema.parse(data))
   .handler(async ({ data }) => {
     const key = getKey();
-    const url = `${KIE_BASE}/jobs/recordInfo?taskId=${encodeURIComponent(data.requestId)}`;
+    const url = `${KIE_BASE}/veo/record-info?taskId=${encodeURIComponent(data.requestId)}`;
 
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${key}` },
@@ -93,30 +99,30 @@ export const getVideoStatus = createServerFn({ method: "POST" })
     const json = (await res.json()) as {
       code?: number;
       data?: {
-        state?: string;
-        resultJson?: string;
-        failMsg?: string;
-        failCode?: string;
+        successFlag?: number;
+        errorMessage?: string | null;
+        errorCode?: number | null;
+        response?: {
+          resultUrls?: string[];
+          fullResultUrls?: string[];
+        };
       };
     };
 
-    const state = json.data?.state ?? "";
+    const flag = json.data?.successFlag;
 
-    if (state === "success") {
-      try {
-        const parsed = JSON.parse(json.data?.resultJson ?? "{}") as { resultUrls?: string[] };
-        const videoUrl = parsed.resultUrls?.[0];
-        if (!videoUrl) return { status: "failed" as const, error: "No video URL in result" };
-        return { status: "done" as const, videoUrl };
-      } catch {
-        return { status: "failed" as const, error: "Could not parse result" };
-      }
+    if (flag === 1) {
+      const videoUrl =
+        json.data?.response?.resultUrls?.[0] ?? json.data?.response?.fullResultUrls?.[0];
+      if (!videoUrl) return { status: "failed" as const, error: "No video URL in result" };
+      return { status: "done" as const, videoUrl };
     }
 
-    if (state === "fail") {
+    if (flag === 2 || flag === 3) {
       return {
         status: "failed" as const,
-        error: json.data?.failMsg || json.data?.failCode || "Generation failed",
+        error:
+          json.data?.errorMessage || (json.data?.errorCode ? `Error ${json.data.errorCode}` : "Generation failed"),
       };
     }
 

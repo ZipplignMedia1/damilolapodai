@@ -176,7 +176,7 @@ function CreatePage() {
           <><Wand2 className="h-5 w-5" /> Generate Video</>
         )}
       </Button>
-      <p className="text-center text-xs text-muted-foreground">Kling 2.1 · ~2–4 minutes</p>
+      <p className="text-center text-xs text-muted-foreground">Veo 3 Fast · with sound · ~2–4 minutes</p>
     </div>
   );
 }
