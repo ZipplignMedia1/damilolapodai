@@ -65,15 +65,17 @@ function CreatePage() {
       toast.loading("Rendering video… this can take a few minutes.", { id: toastId });
 
       let videoUrl: string | undefined;
+      let currentId = result.requestId;
       const startedAt = Date.now();
-      while (Date.now() - startedAt < 10 * 60 * 1000) {
+      while (Date.now() - startedAt < 15 * 60 * 1000) {
         await new Promise((resolve) => window.setTimeout(resolve, 7000));
-        const status = await checkVideoStatus({ data: { requestId: result.requestId } });
+        const status = await checkVideoStatus({ data: { requestId: currentId } });
         if (status.status === "failed") throw new Error(status.error);
         if (status.status === "done") {
           videoUrl = status.videoUrl;
           break;
         }
+        if (status.requestId) currentId = status.requestId;
       }
 
       if (!videoUrl) throw new Error("Video is still processing. Please try again in a few minutes.");
@@ -176,7 +178,7 @@ function CreatePage() {
           <><Wand2 className="h-5 w-5" /> Generate Video</>
         )}
       </Button>
-      <p className="text-center text-xs text-muted-foreground">Veo 3 Fast · with sound · ~2–4 minutes</p>
+      <p className="text-center text-xs text-muted-foreground">Kling + MMAudio · with sound · ~3–5 minutes</p>
     </div>
   );
 }
