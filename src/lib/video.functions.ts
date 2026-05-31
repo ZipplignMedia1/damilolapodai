@@ -1,12 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-// fal.ai queue API. Free credits on signup, no kie billing.
-// Pipeline: Kling (silent video, text- or image-to-video) → MMAudio v2 (synced audio).
-const FAL_QUEUE = "https://queue.fal.run";
-const KLING_IMG = "fal-ai/kling-video/v1/standard/image-to-video";
-const KLING_TXT = "fal-ai/kling-video/v1/standard/text-to-video";
-const MMAUDIO_MODEL = "fal-ai/mmaudio-v2";
+// Pollinations.ai — free-tier video gen using LTX-2 (the only non-paid_only model
+// that supports both text- and image-to-video).
+// Docs: https://enter.pollinations.ai/api/docs/llm.txt
+const GEN_BASE = "https://gen.pollinations.ai";
+const MEDIA_BASE = "https://media.pollinations.ai";
+const VIDEO_MODEL = "ltx-2";
 
 const InputSchema = z.object({
   prompt: z.string().min(1).max(2000),
@@ -20,128 +20,93 @@ const StatusInputSchema = z.object({
 });
 
 function getKey() {
-  const key = process.env.FAL_KEY;
-  if (!key) throw new Error("FAL_KEY is not configured");
+  const key = process.env.POLLINATIONS_API_KEY;
+  if (!key) throw new Error("POLLINATIONS_API_KEY is not configured");
   return key;
 }
 
-function authHeaders(key: string) {
-  return {
-    Authorization: `Key ${key}`,
-    "Content-Type": "application/json",
-  };
+// Parse a data URL like "data:image/png;base64,AAAA..." into bytes + mime.
+function dataUrlToBlob(dataUrl: string): { bytes: Uint8Array; mime: string } {
+  const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) throw new Error("Invalid image data URL");
+  const mime = match[1];
+  const bin = atob(match[2]);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return { bytes, mime };
 }
 
-// Encode pipeline state into the requestId so the client only tracks one string.
-// Format: "<stage>|<model>|<falId>|<duration>|<promptB64>"
-type Stage = "kling" | "mmaudio";
-function encodeState(stage: Stage, model: string, falId: string, duration: number, prompt: string) {
-  const b64 = btoa(unescape(encodeURIComponent(prompt))).replace(/=+$/, "");
-  const modelB64 = btoa(model).replace(/=+$/, "");
-  return `${stage}|${modelB64}|${falId}|${duration}|${b64}`;
-}
-
-function decodeState(s: string) {
-  const [stage, modelB64, falId, dur, b64] = s.split("|");
-  if (!stage || !modelB64 || !falId) throw new Error("Invalid requestId");
-  const model = atob(modelB64 + "==".slice((modelB64.length + 2) % 4));
-  const prompt = b64
-    ? decodeURIComponent(escape(atob(b64 + "==".slice((b64.length + 2) % 4))))
-    : "";
-  return { stage: stage as Stage, model, falId, duration: Number(dur) || 5, prompt };
-}
-
-async function falSubmit(model: string, input: unknown, key: string): Promise<string> {
-  const res = await fetch(`${FAL_QUEUE}/${model}`, {
+async function uploadToMedia(bytes: Uint8Array, mime: string, filename: string, key: string): Promise<string> {
+  const form = new FormData();
+  form.append("file", new Blob([bytes], { type: mime }), filename);
+  const res = await fetch(`${MEDIA_BASE}/upload`, {
     method: "POST",
-    headers: authHeaders(key),
-    body: JSON.stringify(input),
+    headers: { Authorization: `Bearer ${key}` },
+    body: form,
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Submit failed [${res.status}]: ${text.slice(0, 400)}`);
+    throw new Error(`Media upload failed [${res.status}]: ${text.slice(0, 300)}`);
   }
-  const json = (await res.json()) as { request_id?: string };
-  if (!json.request_id) throw new Error("No request_id from fal");
-  return json.request_id;
-}
-
-async function falStatus(model: string, requestId: string, key: string) {
-  const res = await fetch(
-    `${FAL_QUEUE}/${model}/requests/${encodeURIComponent(requestId)}/status`,
-    { headers: { Authorization: `Key ${key}` } },
-  );
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Status failed [${res.status}]: ${text.slice(0, 300)}`);
+  // The upload endpoint typically returns { url, hash } or a plain URL string.
+  const ct = res.headers.get("content-type") ?? "";
+  if (ct.includes("application/json")) {
+    const json = (await res.json()) as { url?: string; hash?: string };
+    if (json.url) return json.url;
+    if (json.hash) return `${MEDIA_BASE}/${json.hash}`;
+    throw new Error("Media upload returned no URL");
   }
-  return (await res.json()) as { status: "IN_QUEUE" | "IN_PROGRESS" | "COMPLETED" | string };
-}
-
-async function falResult(model: string, requestId: string, key: string) {
-  const res = await fetch(
-    `${FAL_QUEUE}/${model}/requests/${encodeURIComponent(requestId)}`,
-    { headers: { Authorization: `Key ${key}` } },
-  );
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Result fetch failed [${res.status}]: ${text.slice(0, 300)}`);
-  }
-  return (await res.json()) as { video?: { url?: string } };
+  const text = (await res.text()).trim();
+  if (text.startsWith("http")) return text;
+  return `${MEDIA_BASE}/${text}`;
 }
 
 export const generateVideo = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => InputSchema.parse(data))
   .handler(async ({ data }) => {
     const key = getKey();
-    const model = data.imageDataUrl ? KLING_IMG : KLING_TXT;
 
-    const input: Record<string, unknown> = {
-      prompt: data.prompt,
+    // 1. If image input, upload to Pollinations media so we can reference by URL.
+    let imageUrl: string | undefined;
+    if (data.imageDataUrl) {
+      const { bytes, mime } = dataUrlToBlob(data.imageDataUrl);
+      const ext = mime.split("/")[1] ?? "png";
+      imageUrl = await uploadToMedia(bytes, mime, `frame.${ext}`, key);
+    }
+
+    // 2. Call Pollinations video endpoint. This is a synchronous request that
+    // streams the MP4 back once generation completes.
+    const params = new URLSearchParams({
+      model: VIDEO_MODEL,
       duration: String(data.duration),
       aspect_ratio: data.aspectRatio,
-    };
-    if (data.imageDataUrl) input.image_url = data.imageDataUrl;
+    });
+    if (imageUrl) params.set("image", imageUrl);
 
-    const klingId = await falSubmit(model, input, key);
-    return { requestId: encodeState("kling", model, klingId, data.duration, data.prompt) };
+    const url = `${GEN_BASE}/video/${encodeURIComponent(data.prompt)}?${params.toString()}`;
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${key}` },
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Video generation failed [${res.status}]: ${text.slice(0, 400)}`);
+    }
+    const contentType = res.headers.get("content-type") ?? "video/mp4";
+    const buf = new Uint8Array(await res.arrayBuffer());
+
+    // 3. Re-upload the MP4 to Pollinations media to get a stable public URL.
+    const finalUrl = await uploadToMedia(buf, contentType, "video.mp4", key);
+
+    // Encode the final URL into the requestId so the existing polling UI works.
+    return { requestId: `done|${finalUrl}` };
   });
 
 export const getVideoStatus = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => StatusInputSchema.parse(data))
   .handler(async ({ data }) => {
-    const key = getKey();
-    const state = decodeState(data.requestId);
-
-    if (state.stage === "kling") {
-      const s = await falStatus(state.model, state.falId, key);
-      if (s.status !== "COMPLETED") {
-        return { status: "processing" as const, requestId: data.requestId };
-      }
-      const result = await falResult(state.model, state.falId, key);
-      const silentUrl = result.video?.url;
-      if (!silentUrl) {
-        return { status: "failed" as const, error: "Kling returned no video URL" };
-      }
-      const audioId = await falSubmit(
-        MMAUDIO_MODEL,
-        { video_url: silentUrl, prompt: state.prompt, duration: state.duration },
-        key,
-      );
-      return {
-        status: "processing" as const,
-        requestId: encodeState("mmaudio", MMAUDIO_MODEL, audioId, state.duration, state.prompt),
-      };
+    if (data.requestId.startsWith("done|")) {
+      const videoUrl = data.requestId.slice("done|".length);
+      return { status: "done" as const, videoUrl };
     }
-
-    const s = await falStatus(state.model, state.falId, key);
-    if (s.status !== "COMPLETED") {
-      return { status: "processing" as const, requestId: data.requestId };
-    }
-    const result = await falResult(state.model, state.falId, key);
-    const finalUrl = result.video?.url;
-    if (!finalUrl) {
-      return { status: "failed" as const, error: "MMAudio returned no video URL" };
-    }
-    return { status: "done" as const, videoUrl: finalUrl };
+    return { status: "failed" as const, error: "Unknown request state" };
   });
