@@ -4,8 +4,8 @@ import { z } from "zod";
 // fal.ai queue API. Free credits on signup, no kie billing.
 // Pipeline: Kling (silent video, text- or image-to-video) → MMAudio v2 (synced audio).
 const FAL_QUEUE = "https://queue.fal.run";
-const KLING_IMG = "fal-ai/kling-video/v1.6/standard/image-to-video";
-const KLING_TXT = "fal-ai/kling-video/v1.6/standard/text-to-video";
+const KLING_IMG = "fal-ai/kling-video/v1/standard/image-to-video";
+const KLING_TXT = "fal-ai/kling-video/v1/standard/text-to-video";
 const MMAUDIO_MODEL = "fal-ai/mmaudio-v2";
 
 const InputSchema = z.object({
