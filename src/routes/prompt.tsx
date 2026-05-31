@@ -1,0 +1,110 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import { Sparkles, Loader2, Copy, Check, Code2 } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+
+export const Route = createFileRoute("/prompt")({
+  head: () => ({
+    meta: [
+      { title: "JSON Prompt Generator — DAMILOLAPOD AI" },
+      { name: "description", content: "Turn any video idea into a structured shot-by-shot JSON prompt." },
+    ],
+  }),
+  component: PromptPage,
+});
+
+function PromptPage() {
+  const [idea, setIdea] = useState("");
+  const [duration, setDuration] = useState(10);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  async function generate() {
+    if (!idea.trim()) return toast.error("Describe your video idea");
+    setLoading(true);
+    setResult(null);
+    try {
+      const res = await fetch("/api/video-prompt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idea, duration }),
+      });
+      if (!res.ok) throw new Error((await res.text()) || `Failed (${res.status})`);
+      const json = await res.json();
+      setResult(JSON.stringify(json, null, 2));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function copy() {
+    if (!result) return;
+    await navigator.clipboard.writeText(result);
+    setCopied(true);
+    toast.success("Copied JSON");
+    setTimeout(() => setCopied(false), 1500);
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold">JSON Prompt Generator</h2>
+            <p className="mt-1 text-xs text-muted-foreground">Describe any video — get a shot-by-shot JSON plan.</p>
+          </div>
+          <div className="flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1.5 text-xs font-medium text-primary">
+            <Code2 className="h-3.5 w-3.5" /> JSON
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <label className="text-sm font-semibold">Your idea</label>
+          <Textarea
+            value={idea}
+            onChange={(e) => setIdea(e.target.value)}
+            placeholder="e.g. A couple argues, then Pepsi instantly changes the mood. Modern living room, bright and refreshing."
+            className="mt-2 min-h-[120px] rounded-xl"
+          />
+        </div>
+
+        <div className="mt-4">
+          <label className="text-sm font-semibold">Duration</label>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {[5, 10, 15, 20, 30].map((d) => (
+              <button
+                key={d}
+                onClick={() => setDuration(d)}
+                className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${duration === d ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground"}`}
+              >
+                {d}s
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <Button onClick={generate} disabled={loading} className="w-full h-12 rounded-xl text-base font-bold">
+        {loading ? (<><Loader2 className="h-5 w-5 animate-spin" /> Generating…</>) : (<><Sparkles className="h-5 w-5" /> Generate JSON Prompt</>)}
+      </Button>
+
+      {result && (
+        <div className="rounded-2xl border border-border bg-card shadow-sm">
+          <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
+            <span className="text-xs font-semibold text-muted-foreground">Generated JSON</span>
+            <button onClick={copy} className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-medium hover:bg-muted">
+              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? "Copied" : "Copy"}
+            </button>
+          </div>
+          <pre className="max-h-[60vh] overflow-auto p-4 text-[11px] leading-relaxed font-mono text-foreground/90">{result}</pre>
+        </div>
+      )}
+    </div>
+  );
+}

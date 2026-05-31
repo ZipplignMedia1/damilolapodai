@@ -8,7 +8,7 @@ import {
   Scripts,
   useLocation,
 } from "@tanstack/react-router";
-import { Home, Image as ImageIcon, Video, Layers, Clock } from "lucide-react";
+import { Home, Image as ImageIcon, Video, Layers, Clock, Code2 } from "lucide-react";
 import { Toaster } from "@/components/ui/sonner";
 import appCss from "../styles.css?url";
 
@@ -75,6 +75,7 @@ function BottomNav() {
     { to: "/", label: "Home", Icon: Home },
     { to: "/image", label: "Image", Icon: ImageIcon },
     { to: "/video", label: "Video", Icon: Video },
+    { to: "/prompt", label: "JSON", Icon: Code2 },
     { to: "/storyboard", label: "Board", Icon: Layers },
     { to: "/history", label: "Saved", Icon: Clock },
   ];

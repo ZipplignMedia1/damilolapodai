@@ -11,9 +11,11 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VideoRouteImport } from './routes/video'
 import { Route as StoryboardRouteImport } from './routes/storyboard'
+import { Route as PromptRouteImport } from './routes/prompt'
 import { Route as ImageRouteImport } from './routes/image'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiVideoPromptRouteImport } from './routes/api/video-prompt'
 import { Route as ApiTransformImageRouteImport } from './routes/api/transform-image'
 import { Route as ApiStoryboardRouteImport } from './routes/api/storyboard'
 import { Route as ApiKeyframesRouteImport } from './routes/api/keyframes'
@@ -30,6 +32,11 @@ const StoryboardRoute = StoryboardRouteImport.update({
   path: '/storyboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PromptRoute = PromptRouteImport.update({
+  id: '/prompt',
+  path: '/prompt',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ImageRoute = ImageRouteImport.update({
   id: '/image',
   path: '/image',
@@ -43,6 +50,11 @@ const HistoryRoute = HistoryRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiVideoPromptRoute = ApiVideoPromptRouteImport.update({
+  id: '/api/video-prompt',
+  path: '/api/video-prompt',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiTransformImageRoute = ApiTransformImageRouteImport.update({
@@ -75,6 +87,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/history': typeof HistoryRoute
   '/image': typeof ImageRoute
+  '/prompt': typeof PromptRoute
   '/storyboard': typeof StoryboardRoute
   '/video': typeof VideoRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
@@ -82,11 +95,13 @@ export interface FileRoutesByFullPath {
   '/api/keyframes': typeof ApiKeyframesRoute
   '/api/storyboard': typeof ApiStoryboardRoute
   '/api/transform-image': typeof ApiTransformImageRoute
+  '/api/video-prompt': typeof ApiVideoPromptRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/history': typeof HistoryRoute
   '/image': typeof ImageRoute
+  '/prompt': typeof PromptRoute
   '/storyboard': typeof StoryboardRoute
   '/video': typeof VideoRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
@@ -94,12 +109,14 @@ export interface FileRoutesByTo {
   '/api/keyframes': typeof ApiKeyframesRoute
   '/api/storyboard': typeof ApiStoryboardRoute
   '/api/transform-image': typeof ApiTransformImageRoute
+  '/api/video-prompt': typeof ApiVideoPromptRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/history': typeof HistoryRoute
   '/image': typeof ImageRoute
+  '/prompt': typeof PromptRoute
   '/storyboard': typeof StoryboardRoute
   '/video': typeof VideoRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
@@ -107,6 +124,7 @@ export interface FileRoutesById {
   '/api/keyframes': typeof ApiKeyframesRoute
   '/api/storyboard': typeof ApiStoryboardRoute
   '/api/transform-image': typeof ApiTransformImageRoute
+  '/api/video-prompt': typeof ApiVideoPromptRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -114,6 +132,7 @@ export interface FileRouteTypes {
     | '/'
     | '/history'
     | '/image'
+    | '/prompt'
     | '/storyboard'
     | '/video'
     | '/api/generate-image'
@@ -121,11 +140,13 @@ export interface FileRouteTypes {
     | '/api/keyframes'
     | '/api/storyboard'
     | '/api/transform-image'
+    | '/api/video-prompt'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/history'
     | '/image'
+    | '/prompt'
     | '/storyboard'
     | '/video'
     | '/api/generate-image'
@@ -133,11 +154,13 @@ export interface FileRouteTypes {
     | '/api/keyframes'
     | '/api/storyboard'
     | '/api/transform-image'
+    | '/api/video-prompt'
   id:
     | '__root__'
     | '/'
     | '/history'
     | '/image'
+    | '/prompt'
     | '/storyboard'
     | '/video'
     | '/api/generate-image'
@@ -145,12 +168,14 @@ export interface FileRouteTypes {
     | '/api/keyframes'
     | '/api/storyboard'
     | '/api/transform-image'
+    | '/api/video-prompt'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   HistoryRoute: typeof HistoryRoute
   ImageRoute: typeof ImageRoute
+  PromptRoute: typeof PromptRoute
   StoryboardRoute: typeof StoryboardRoute
   VideoRoute: typeof VideoRoute
   ApiGenerateImageRoute: typeof ApiGenerateImageRoute
@@ -158,6 +183,7 @@ export interface RootRouteChildren {
   ApiKeyframesRoute: typeof ApiKeyframesRoute
   ApiStoryboardRoute: typeof ApiStoryboardRoute
   ApiTransformImageRoute: typeof ApiTransformImageRoute
+  ApiVideoPromptRoute: typeof ApiVideoPromptRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -174,6 +200,13 @@ declare module '@tanstack/react-router' {
       path: '/storyboard'
       fullPath: '/storyboard'
       preLoaderRoute: typeof StoryboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/prompt': {
+      id: '/prompt'
+      path: '/prompt'
+      fullPath: '/prompt'
+      preLoaderRoute: typeof PromptRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/image': {
@@ -195,6 +228,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/video-prompt': {
+      id: '/api/video-prompt'
+      path: '/api/video-prompt'
+      fullPath: '/api/video-prompt'
+      preLoaderRoute: typeof ApiVideoPromptRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/transform-image': {
@@ -239,6 +279,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   HistoryRoute: HistoryRoute,
   ImageRoute: ImageRoute,
+  PromptRoute: PromptRoute,
   StoryboardRoute: StoryboardRoute,
   VideoRoute: VideoRoute,
   ApiGenerateImageRoute: ApiGenerateImageRoute,
@@ -246,6 +287,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiKeyframesRoute: ApiKeyframesRoute,
   ApiStoryboardRoute: ApiStoryboardRoute,
   ApiTransformImageRoute: ApiTransformImageRoute,
+  ApiVideoPromptRoute: ApiVideoPromptRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
