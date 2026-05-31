@@ -122,17 +122,22 @@ function Header() {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const { pathname } = useLocation();
+  const isWelcome = pathname === "/";
+
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="relative min-h-screen overflow-hidden bg-background pb-28">
-        <div className="pointer-events-none absolute -top-40 left-1/2 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-primary/20 blur-3xl" />
+      <div className="relative min-h-screen overflow-hidden bg-background">
+        {!isWelcome && (
+          <div className="pointer-events-none absolute -top-40 left-1/2 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-primary/20 blur-3xl" />
+        )}
         <div className="relative">
-          <Header />
-          <main className="mx-auto max-w-screen-md px-4 pt-2">
+          {!isWelcome && <Header />}
+          <main className={isWelcome ? "" : "mx-auto max-w-screen-md px-4 pt-2 pb-28"}>
             <Outlet />
           </main>
         </div>
-        <BottomNav />
+        {!isWelcome && <BottomNav />}
         <Toaster position="top-center" />
       </div>
     </QueryClientProvider>
