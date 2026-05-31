@@ -58,19 +58,47 @@ function ImagePage() {
 
   useEffect(() => () => { if (progressTimer.current) clearInterval(progressTimer.current); }, []);
 
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+  async function downscale(file: File, max = 1024, quality = 0.82): Promise<string> {
+    const dataUrl = await new Promise<string>((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(String(r.result));
+      r.onerror = () => rej(r.error);
+      r.readAsDataURL(file);
+    });
+    const img = await new Promise<HTMLImageElement>((res, rej) => {
+      const i = new Image();
+      i.onload = () => res(i);
+      i.onerror = () => rej(new Error("image load failed"));
+      i.src = dataUrl;
+    });
+    const scale = Math.min(1, max / Math.max(img.width, img.height));
+    const w = Math.round(img.width * scale);
+    const h = Math.round(img.height * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return dataUrl;
+    ctx.drawImage(img, 0, 0, w, h);
+    return canvas.toDataURL("image/jpeg", quality);
+  }
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
     if (!files.length) return;
     const remaining = Math.max(0, 8 - attachments.length);
     if (files.length > remaining) toast.message(`Max 8 images. ${files.length - remaining} skipped.`);
-    files.slice(0, remaining).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = () =>
-        setAttachments((prev) => [...prev, { id: crypto.randomUUID(), name: file.name, dataUrl: String(reader.result) }]);
-      reader.readAsDataURL(file);
-    });
-    e.target.value = "";
+    for (const file of files.slice(0, remaining)) {
+      try {
+        const dataUrl = await downscale(file);
+        setAttachments((prev) => [...prev, { id: crypto.randomUUID(), name: file.name, dataUrl }]);
+      } catch {
+        toast.error(`Could not read ${file.name}`);
+      }
+    }
   }
+
 
   async function handleGenerate() {
     if (!prompt.trim()) return toast.error("Please enter a prompt");
