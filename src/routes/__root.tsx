@@ -8,7 +8,7 @@ import {
   Scripts,
   useLocation,
 } from "@tanstack/react-router";
-import { Home, Image as ImageIcon, Video, Layers, Clock, Code2 } from "lucide-react";
+import { Home, Library, Plus, User } from "lucide-react";
 import { Toaster } from "@/components/ui/sonner";
 import { CreditBadge } from "@/components/CreditBadge";
 import appCss from "../styles.css?url";
@@ -74,23 +74,21 @@ function BottomNav() {
   const { pathname } = useLocation();
   const items = [
     { to: "/", label: "Home", Icon: Home },
-    { to: "/image", label: "Image", Icon: ImageIcon },
-    { to: "/video", label: "Video", Icon: Video },
-    { to: "/prompt", label: "JSON", Icon: Code2 },
-    { to: "/storyboard", label: "Board", Icon: Layers },
-    { to: "/history", label: "Saved", Icon: Clock },
+    { to: "/history", label: "Library", Icon: Library },
+    { to: "/image", label: "Create", Icon: Plus },
+    { to: "/profile", label: "Profile", Icon: User },
   ];
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40">
       <div className="mx-auto max-w-screen-md px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
-        <div className="flex items-center justify-around rounded-2xl border border-border bg-card/80 px-2 py-2 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)] backdrop-blur-xl">
+        <div className="flex items-center justify-around rounded-2xl border border-border bg-card px-2 py-2">
           {items.map(({ to, label, Icon }) => {
             const active = pathname === to;
             return (
               <Link
                 key={to}
                 to={to}
-                className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl px-2 py-1.5 text-[10px] font-semibold transition ${active ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground"}`}
+                className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl px-2 py-1.5 text-[10px] font-semibold transition ${active ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground"}`}
               >
                 <Icon className="h-5 w-5" strokeWidth={active ? 2.5 : 1.75} />
                 {label}
@@ -107,7 +105,7 @@ function Header() {
   return (
     <header className="mx-auto flex max-w-screen-md items-center justify-between gap-3 px-5 pt-6 pb-4">
       <div className="flex items-center gap-2.5">
-        <div className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--gradient-primary)] text-primary-foreground shadow-[var(--shadow-glow)]">
+        <div className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
           <span className="font-display text-lg font-extrabold">D</span>
         </div>
         <div className="leading-tight">
@@ -127,10 +125,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="relative min-h-screen overflow-hidden bg-background">
-        {!isWelcome && (
-          <div className="pointer-events-none absolute -top-40 left-1/2 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-primary/20 blur-3xl" />
-        )}
+      <div className="relative min-h-screen bg-background">
         <div className="relative">
           {!isWelcome && <Header />}
           <main className={isWelcome ? "" : "mx-auto max-w-screen-md px-4 pt-2 pb-28"}>

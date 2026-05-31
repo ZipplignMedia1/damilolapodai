@@ -62,7 +62,7 @@ export function CreditBadge() {
         <span>{credits}</span>
       </div>
       <DropdownMenu>
-        <DropdownMenuTrigger className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--gradient-primary)] text-primary-foreground text-xs font-bold shadow-sm">
+        <DropdownMenuTrigger className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold shadow-sm">
           {profile?.avatar_url ? (
             <img src={profile.avatar_url} alt="" className="h-full w-full rounded-full object-cover" />
           ) : (

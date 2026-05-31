@@ -77,7 +77,7 @@ function LoginPage() {
   return (
     <div className="mx-auto max-w-sm space-y-5 pt-4">
       <div className="text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--gradient-primary)] text-primary-foreground shadow-[var(--shadow-glow)]">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-[var(--shadow-glow)]">
           <Sparkles className="h-6 w-6" />
         </div>
         <h1 className="mt-4 font-display text-2xl font-extrabold">
