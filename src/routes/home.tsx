@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ImageIcon, Video, Layers, Library, ArrowRight } from "lucide-react";
+import { Code2, ImageIcon, Video, Layers, Library, ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/home")({
   head: () => ({
