@@ -81,8 +81,8 @@ function ImagePage() {
     const gen: Gen = { id, prompt: currentPrompt, status: "loading", progress: 0, ratio: currentRatio };
     setGens((g) => [gen, ...g]);
     setPrompt("");
-    const initImage = attachment?.dataUrl;
-    setAttachment(null);
+    const referenceImages = attachments.map((a) => a.dataUrl);
+    setAttachments([]);
 
     let p = 0;
     if (progressTimer.current) clearInterval(progressTimer.current);
