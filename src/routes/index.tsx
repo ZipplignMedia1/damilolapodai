@@ -61,7 +61,7 @@ function CreatePage() {
           prompt: prompt.trim(),
           aspectRatio: ratio,
           duration,
-          imageDataUrl,
+          ...(mode === "image" && imageDataUrl ? { imageDataUrl } : {}),
         },
       });
       toast.loading("Rendering video… this can take a few minutes.", { id: toastId });
