@@ -34,7 +34,7 @@
 }
 
 :root {
-  --radius: 1rem;
+  --radius: 0.5rem;
   /* Red & black, dark by default — Dola-like premium AI feel */
   --background: oklch(0.13 0.01 20);
   --foreground: oklch(0.98 0 0);
