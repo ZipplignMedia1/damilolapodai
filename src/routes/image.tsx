@@ -22,7 +22,18 @@ const MODELS = [
 ] as const;
 type ModelId = (typeof MODELS)[number]["id"];
 const RATIOS: Ratio[] = ["1:1", "16:9", "9:16"];
-const STYLES = ["photorealistic", "cinematic", "3D render", "anime"] as const;
+const TYPES = [
+  { id: "photo", label: "Photo" },
+  { id: "graphic-design", label: "Graphic Design" },
+  { id: "book-cover", label: "Book Cover" },
+  { id: "face-portrait", label: "Face / Portrait" },
+  { id: "flyer", label: "Flyer" },
+  { id: "logo", label: "Logo" },
+  { id: "illustration", label: "Illustration" },
+  { id: "product", label: "Product Shot" },
+  { id: "prompt", label: "Prompt (Detailed)" },
+] as const;
+type ImageType = (typeof TYPES)[number]["id"];
 
 type Gen =
   | { id: string; prompt: string; status: "loading"; progress: number; ratio: Ratio }
@@ -32,8 +43,8 @@ function ImagePage() {
   const [prompt, setPrompt] = useState("");
   const [model, setModel] = useState<ModelId>("nano-banana");
   const [ratio, setRatio] = useState<Ratio>("1:1");
-  const [style, setStyle] = useState<(typeof STYLES)[number]>("photorealistic");
-  const [showStyle, setShowStyle] = useState(false);
+  const [type, setType] = useState<ImageType>("photo");
+  const [showType, setShowType] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [gens, setGens] = useState<Gen[]>([]);
   const [attachment, setAttachment] = useState<{ name: string; dataUrl: string } | null>(null);
@@ -82,7 +93,7 @@ function ImagePage() {
       const res = await fetch("/api/generate-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: currentPrompt, model, style, aspectRatio: currentRatio, initImage }),
+        body: JSON.stringify({ prompt: currentPrompt, model, type, aspectRatio: currentRatio, initImage }),
       });
       if (!res.ok) throw new Error((await res.text()) || `Failed (${res.status})`);
       const { image } = (await res.json()) as { image: string };
@@ -124,17 +135,17 @@ function ImagePage() {
       {/* Sticky composer */}
       <div className="fixed bottom-[88px] left-0 right-0 z-30 px-4">
         <div className="mx-auto max-w-screen-md">
-          {showStyle && (
+          {showType && (
             <div className="mb-2 rounded-lg border border-border bg-card/95 p-3 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)] backdrop-blur-xl">
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Style</p>
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Type</p>
               <div className="flex flex-wrap gap-1.5">
-                {STYLES.map((s) => (
+                {TYPES.map((t) => (
                   <button
-                    key={s}
-                    onClick={() => setStyle(s)}
-                    className={`rounded-md border px-3 py-1 text-xs font-medium capitalize transition ${style === s ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground"}`}
+                    key={t.id}
+                    onClick={() => { setType(t.id); setShowType(false); }}
+                    className={`rounded-md border px-3 py-1 text-xs font-medium transition ${type === t.id ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground"}`}
                   >
-                    {s}
+                    {t.label}
                   </button>
                 ))}
               </div>
@@ -192,8 +203,8 @@ function ImagePage() {
                 ))}
               </select>
               <div className="flex items-center gap-1.5">
-                <Pill onClick={() => setShowStyle((s) => !s)} active={showStyle}>
-                  <Sparkles className="h-3 w-3" /> {style}
+                <Pill onClick={() => setShowType((s) => !s)} active={showType}>
+                  <Sparkles className="h-3 w-3" /> {TYPES.find((t) => t.id === type)?.label ?? type}
                 </Pill>
                 <Pill
                   onClick={() => {
