@@ -21,7 +21,7 @@ function WelcomePage() {
           <img
             src={avatar}
             alt="DAMILOLAPOD AI"
-            className="h-full w-full object-cover object-center"
+            className="h-full w-full object-cover object-[center_35%]"
           />
         </div>
       </div>

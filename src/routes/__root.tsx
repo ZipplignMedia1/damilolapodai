@@ -73,7 +73,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
 function BottomNav() {
   const { pathname } = useLocation();
   const items = [
-    { to: "/", label: "Home", Icon: Home },
+    { to: "/home", label: "Home", Icon: Home },
     { to: "/history", label: "Library", Icon: Library },
     { to: "/image", label: "Create", Icon: Plus },
     { to: "/profile", label: "Profile", Icon: User },
