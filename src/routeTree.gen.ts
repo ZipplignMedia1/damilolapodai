@@ -16,6 +16,7 @@ import { Route as ImageRouteImport } from './routes/image'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiVideoPromptRouteImport } from './routes/api/video-prompt'
+import { Route as ApiVerifyGeminiRouteImport } from './routes/api/verify-gemini'
 import { Route as ApiTransformImageRouteImport } from './routes/api/transform-image'
 import { Route as ApiStoryboardSceneRouteImport } from './routes/api/storyboard-scene'
 import { Route as ApiStoryboardRouteImport } from './routes/api/storyboard'
@@ -56,6 +57,11 @@ const IndexRoute = IndexRouteImport.update({
 const ApiVideoPromptRoute = ApiVideoPromptRouteImport.update({
   id: '/api/video-prompt',
   path: '/api/video-prompt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiVerifyGeminiRoute = ApiVerifyGeminiRouteImport.update({
+  id: '/api/verify-gemini',
+  path: '/api/verify-gemini',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiTransformImageRoute = ApiTransformImageRouteImport.update({
@@ -102,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/api/storyboard': typeof ApiStoryboardRoute
   '/api/storyboard-scene': typeof ApiStoryboardSceneRoute
   '/api/transform-image': typeof ApiTransformImageRoute
+  '/api/verify-gemini': typeof ApiVerifyGeminiRoute
   '/api/video-prompt': typeof ApiVideoPromptRoute
 }
 export interface FileRoutesByTo {
@@ -117,6 +124,7 @@ export interface FileRoutesByTo {
   '/api/storyboard': typeof ApiStoryboardRoute
   '/api/storyboard-scene': typeof ApiStoryboardSceneRoute
   '/api/transform-image': typeof ApiTransformImageRoute
+  '/api/verify-gemini': typeof ApiVerifyGeminiRoute
   '/api/video-prompt': typeof ApiVideoPromptRoute
 }
 export interface FileRoutesById {
@@ -133,6 +141,7 @@ export interface FileRoutesById {
   '/api/storyboard': typeof ApiStoryboardRoute
   '/api/storyboard-scene': typeof ApiStoryboardSceneRoute
   '/api/transform-image': typeof ApiTransformImageRoute
+  '/api/verify-gemini': typeof ApiVerifyGeminiRoute
   '/api/video-prompt': typeof ApiVideoPromptRoute
 }
 export interface FileRouteTypes {
@@ -150,6 +159,7 @@ export interface FileRouteTypes {
     | '/api/storyboard'
     | '/api/storyboard-scene'
     | '/api/transform-image'
+    | '/api/verify-gemini'
     | '/api/video-prompt'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -165,6 +175,7 @@ export interface FileRouteTypes {
     | '/api/storyboard'
     | '/api/storyboard-scene'
     | '/api/transform-image'
+    | '/api/verify-gemini'
     | '/api/video-prompt'
   id:
     | '__root__'
@@ -180,6 +191,7 @@ export interface FileRouteTypes {
     | '/api/storyboard'
     | '/api/storyboard-scene'
     | '/api/transform-image'
+    | '/api/verify-gemini'
     | '/api/video-prompt'
   fileRoutesById: FileRoutesById
 }
@@ -196,6 +208,7 @@ export interface RootRouteChildren {
   ApiStoryboardRoute: typeof ApiStoryboardRoute
   ApiStoryboardSceneRoute: typeof ApiStoryboardSceneRoute
   ApiTransformImageRoute: typeof ApiTransformImageRoute
+  ApiVerifyGeminiRoute: typeof ApiVerifyGeminiRoute
   ApiVideoPromptRoute: typeof ApiVideoPromptRoute
 }
 
@@ -248,6 +261,13 @@ declare module '@tanstack/react-router' {
       path: '/api/video-prompt'
       fullPath: '/api/video-prompt'
       preLoaderRoute: typeof ApiVideoPromptRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/verify-gemini': {
+      id: '/api/verify-gemini'
+      path: '/api/verify-gemini'
+      fullPath: '/api/verify-gemini'
+      preLoaderRoute: typeof ApiVerifyGeminiRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/transform-image': {
@@ -308,8 +328,19 @@ const rootRouteChildren: RootRouteChildren = {
   ApiStoryboardRoute: ApiStoryboardRoute,
   ApiStoryboardSceneRoute: ApiStoryboardSceneRoute,
   ApiTransformImageRoute: ApiTransformImageRoute,
+  ApiVerifyGeminiRoute: ApiVerifyGeminiRoute,
   ApiVideoPromptRoute: ApiVideoPromptRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
