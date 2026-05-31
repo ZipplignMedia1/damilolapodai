@@ -6,7 +6,7 @@ import { Loader2, Wand2, Film, Copy, Check, Coins } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { addStoryboard, type StoryboardItem, type StoryboardScene } from "@/lib/library";
+import { addStoryboard, type StoryboardScene } from "@/lib/library";
 import { supabase } from "@/integrations/supabase/client";
 import { generateStoryboard } from "@/lib/credits.functions";
 
