@@ -127,12 +127,12 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <div className="relative min-h-screen bg-background">
         <div className="relative">
-          {!isWelcome && <Header />}
-          <main className={isWelcome ? "" : "mx-auto max-w-screen-md px-4 pt-2 pb-28"}>
+          {!isChromeHidden && <Header />}
+          <main className={isChromeHidden ? "" : "mx-auto max-w-screen-md px-4 pt-2 pb-28"}>
             <Outlet />
           </main>
         </div>
-        {!isWelcome && <BottomNav />}
+        {!isChromeHidden && <BottomNav />}
         <Toaster position="top-center" />
       </div>
     </QueryClientProvider>
