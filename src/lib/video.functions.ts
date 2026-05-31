@@ -89,6 +89,12 @@ export const generateVideo = createServerFn({ method: "POST" })
     });
     if (!res.ok) {
       const text = await res.text();
+      if (res.status === 402) {
+        throw new Error("Pollinations balance too low. Top up at enter.pollinations.ai or wait for the daily free-tier reset.");
+      }
+      if (res.status === 401 || res.status === 403) {
+        throw new Error("Pollinations API key is invalid or lacks permission. Check POLLINATIONS_API_KEY.");
+      }
       throw new Error(`Video generation failed [${res.status}]: ${text.slice(0, 400)}`);
     }
     const contentType = res.headers.get("content-type") ?? "video/mp4";
