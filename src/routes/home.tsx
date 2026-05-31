@@ -12,6 +12,7 @@ export const Route = createFileRoute("/home")({
 });
 
 const tiles = [
+  { to: "/prompt", label: "JSON", desc: "Prompt generator", Icon: Code2 },
   { to: "/image", label: "Image", desc: "Generate from prompt", Icon: ImageIcon },
   { to: "/video", label: "Video", desc: "Bring it to life", Icon: Video },
   { to: "/storyboard", label: "Storyboard", desc: "Plan your scenes", Icon: Layers },
