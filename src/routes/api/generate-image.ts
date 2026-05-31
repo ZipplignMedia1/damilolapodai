@@ -1,16 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+type ModelId = "nano-banana" | "nano-banana-pro";
+
 type Body = {
   prompt: string;
+  model?: ModelId;
   style?: string;
   aspectRatio?: "1:1" | "16:9" | "9:16";
   lighting?: string;
 };
 
-const SIZE: Record<string, string> = {
-  "1:1": "1024x1024",
-  "16:9": "1536x1024",
-  "9:16": "1024x1536",
+const MODEL_MAP: Record<ModelId, string> = {
+  "nano-banana": "google/gemini-2.5-flash-image",
+  "nano-banana-pro": "google/gemini-3-pro-image-preview",
 };
 
 export const Route = createFileRoute("/api/generate-image")({
@@ -22,26 +24,27 @@ export const Route = createFileRoute("/api/generate-image")({
         if (!key) return new Response("Missing LOVABLE_API_KEY", { status: 500 });
         if (!body.prompt?.trim()) return new Response("prompt required", { status: 400 });
 
+        const model = MODEL_MAP[body.model ?? "nano-banana"] ?? MODEL_MAP["nano-banana"];
+
+        const ratio = body.aspectRatio ?? "1:1";
         const fullPrompt = [
           body.prompt.trim(),
           body.style ? `Style: ${body.style}.` : "",
           body.lighting ? `Lighting: ${body.lighting}.` : "",
+          `Aspect ratio: ${ratio}.`,
           "Ultra detailed, high quality.",
         ]
           .filter(Boolean)
           .join(" ");
-
-        const size = SIZE[body.aspectRatio ?? "1:1"] ?? "1024x1024";
 
         try {
           const res = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
             method: "POST",
             headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
             body: JSON.stringify({
-              model: "openai/gpt-image-2",
-              prompt: fullPrompt,
-              quality: "low",
-              size,
+              model,
+              messages: [{ role: "user", content: fullPrompt }],
+              modalities: ["image", "text"],
             }),
           });
           if (!res.ok) {
