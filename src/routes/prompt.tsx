@@ -91,6 +91,21 @@ function PromptPage() {
         </div>
 
         <div className="mt-4">
+          <label className="text-sm font-semibold">Target AI video model</label>
+          <Select value={target} onValueChange={(v) => setTarget(v as TargetId)}>
+            <SelectTrigger className="mt-2 h-11 rounded-xl">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {TARGETS.map((t) => (
+                <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="mt-1.5 text-[11px] text-muted-foreground">JSON will be tailored to the selected model's prompt format.</p>
+        </div>
+
+        <div className="mt-4">
           <label className="text-sm font-semibold">Duration</label>
           <div className="mt-2 flex flex-wrap gap-2">
             {[5, 10, 15, 20, 30].map((d) => (
