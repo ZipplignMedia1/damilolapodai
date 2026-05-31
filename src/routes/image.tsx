@@ -93,7 +93,7 @@ function ImagePage() {
       const res = await fetch("/api/generate-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: currentPrompt, model, style, aspectRatio: currentRatio, initImage }),
+        body: JSON.stringify({ prompt: currentPrompt, model, type, aspectRatio: currentRatio, initImage }),
       });
       if (!res.ok) throw new Error((await res.text()) || `Failed (${res.status})`);
       const { image } = (await res.json()) as { image: string };
