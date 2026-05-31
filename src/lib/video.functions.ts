@@ -2,16 +2,17 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 // fal.ai queue API. Free credits on signup, no kie billing.
-// Pipeline: Kling (silent image-to-video) → MMAudio v2 (synced audio).
+// Pipeline: Kling (silent video, text- or image-to-video) → MMAudio v2 (synced audio).
 const FAL_QUEUE = "https://queue.fal.run";
-const KLING_MODEL = "fal-ai/kling-video/v1.6/standard/image-to-video";
+const KLING_IMG = "fal-ai/kling-video/v1.6/standard/image-to-video";
+const KLING_TXT = "fal-ai/kling-video/v1.6/standard/text-to-video";
 const MMAUDIO_MODEL = "fal-ai/mmaudio-v2";
 
 const InputSchema = z.object({
   prompt: z.string().min(1).max(2000),
   aspectRatio: z.enum(["16:9", "9:16", "1:1"]),
   duration: z.union([z.literal(5), z.literal(10)]),
-  imageDataUrl: z.string().min(1).max(15_000_000),
+  imageDataUrl: z.string().min(1).max(15_000_000).optional(),
 });
 
 const StatusInputSchema = z.object({
@@ -32,19 +33,22 @@ function authHeaders(key: string) {
 }
 
 // Encode pipeline state into the requestId so the client only tracks one string.
-// Format: "<stage>|<falId>|<duration>|<promptB64>"
-function encodeState(stage: "kling" | "mmaudio", falId: string, duration: number, prompt: string) {
+// Format: "<stage>|<model>|<falId>|<duration>|<promptB64>"
+type Stage = "kling" | "mmaudio";
+function encodeState(stage: Stage, model: string, falId: string, duration: number, prompt: string) {
   const b64 = btoa(unescape(encodeURIComponent(prompt))).replace(/=+$/, "");
-  return `${stage}|${falId}|${duration}|${b64}`;
+  const modelB64 = btoa(model).replace(/=+$/, "");
+  return `${stage}|${modelB64}|${falId}|${duration}|${b64}`;
 }
 
 function decodeState(s: string) {
-  const [stage, falId, dur, b64] = s.split("|");
-  if (!stage || !falId) throw new Error("Invalid requestId");
+  const [stage, modelB64, falId, dur, b64] = s.split("|");
+  if (!stage || !modelB64 || !falId) throw new Error("Invalid requestId");
+  const model = atob(modelB64 + "==".slice((modelB64.length + 2) % 4));
   const prompt = b64
     ? decodeURIComponent(escape(atob(b64 + "==".slice((b64.length + 2) % 4))))
     : "";
-  return { stage: stage as "kling" | "mmaudio", falId, duration: Number(dur) || 5, prompt };
+  return { stage: stage as Stage, model, falId, duration: Number(dur) || 5, prompt };
 }
 
 async function falSubmit(model: string, input: unknown, key: string): Promise<string> {
@@ -90,20 +94,17 @@ export const generateVideo = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => InputSchema.parse(data))
   .handler(async ({ data }) => {
     const key = getKey();
+    const model = data.imageDataUrl ? KLING_IMG : KLING_TXT;
 
-    // Kling 1.6 standard supports image-to-video with aspect 16:9, 9:16, 1:1
-    const klingId = await falSubmit(
-      KLING_MODEL,
-      {
-        prompt: data.prompt,
-        image_url: data.imageDataUrl, // fal accepts data URIs
-        duration: String(data.duration), // "5" or "10"
-        aspect_ratio: data.aspectRatio,
-      },
-      key,
-    );
+    const input: Record<string, unknown> = {
+      prompt: data.prompt,
+      duration: String(data.duration),
+      aspect_ratio: data.aspectRatio,
+    };
+    if (data.imageDataUrl) input.image_url = data.imageDataUrl;
 
-    return { requestId: encodeState("kling", klingId, data.duration, data.prompt) };
+    const klingId = await falSubmit(model, input, key);
+    return { requestId: encodeState("kling", model, klingId, data.duration, data.prompt) };
   });
 
 export const getVideoStatus = createServerFn({ method: "POST" })
@@ -113,37 +114,31 @@ export const getVideoStatus = createServerFn({ method: "POST" })
     const state = decodeState(data.requestId);
 
     if (state.stage === "kling") {
-      const s = await falStatus(KLING_MODEL, state.falId, key);
+      const s = await falStatus(state.model, state.falId, key);
       if (s.status !== "COMPLETED") {
         return { status: "processing" as const, requestId: data.requestId };
       }
-      const result = await falResult(KLING_MODEL, state.falId, key);
+      const result = await falResult(state.model, state.falId, key);
       const silentUrl = result.video?.url;
       if (!silentUrl) {
         return { status: "failed" as const, error: "Kling returned no video URL" };
       }
-      // Submit MMAudio with the silent video.
       const audioId = await falSubmit(
         MMAUDIO_MODEL,
-        {
-          video_url: silentUrl,
-          prompt: state.prompt,
-          duration: state.duration,
-        },
+        { video_url: silentUrl, prompt: state.prompt, duration: state.duration },
         key,
       );
       return {
         status: "processing" as const,
-        requestId: encodeState("mmaudio", audioId, state.duration, state.prompt),
+        requestId: encodeState("mmaudio", MMAUDIO_MODEL, audioId, state.duration, state.prompt),
       };
     }
 
-    // mmaudio stage
-    const s = await falStatus(MMAUDIO_MODEL, state.falId, key);
+    const s = await falStatus(state.model, state.falId, key);
     if (s.status !== "COMPLETED") {
       return { status: "processing" as const, requestId: data.requestId };
     }
-    const result = await falResult(MMAUDIO_MODEL, state.falId, key);
+    const result = await falResult(state.model, state.falId, key);
     const finalUrl = result.video?.url;
     if (!finalUrl) {
       return { status: "failed" as const, error: "MMAudio returned no video URL" };
