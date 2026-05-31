@@ -134,24 +134,23 @@ function ImagePage() {
       const dims = currentRatio === "1:1" ? { w: 1024, h: 1024 } : currentRatio === "16:9" ? { w: 1280, h: 720 } : { w: 720, h: 1280 };
       const directive = "Ultra detailed, high quality, photorealistic, no watermark.";
       const fullPrompt = `${directive} ${currentPrompt}`;
-      const seed = Math.floor(Math.random() * 1_000_000);
-      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(fullPrompt)}?width=${dims.w}&height=${dims.h}&model=${encodeURIComponent(model)}&seed=${seed}&nologo=true&enhance=true`;
+      const seed = Date.now() + Math.floor(Math.random() * 1_000_000);
+      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(fullPrompt)}?width=${dims.w}&height=${dims.h}&model=${encodeURIComponent(model)}&seed=${seed}&nologo=true&enhance=true&nofeed=true`;
 
-      // Fetch directly from Pollinations — no Cloudflare Worker timeout.
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`Pollinations ${res.status}`);
-      const blob = await res.blob();
-      const image: string = await new Promise((resolve, reject) => {
-        const r = new FileReader();
-        r.onload = () => resolve(String(r.result));
-        r.onerror = () => reject(r.error);
-        r.readAsDataURL(blob);
+      // Load via native <img> so the browser owns the queueing — no fetch hangs.
+      await new Promise<void>((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error("Image failed to load"));
+        img.src = url;
       });
-      void referenceImages; // refs not supported by Pollinations text-to-image
+
+      void referenceImages;
       setGens((prev) =>
-        prev.map((g) => (g.id === id ? { id, prompt: currentPrompt, status: "done", image, ratio: currentRatio } : g))
+        prev.map((g) => (g.id === id ? { id, prompt: currentPrompt, status: "done", image: url, ratio: currentRatio } : g))
       );
-      addImage({ id, createdAt: Date.now(), kind: "image", prompt: currentPrompt, dataUrl: image, source: "text" });
+      addImage({ id, createdAt: Date.now(), kind: "image", prompt: currentPrompt, dataUrl: url, source: "text" });
       toast.success("Image ready!");
     } catch (err) {
       setGens((prev) => prev.filter((g) => g.id !== id));
