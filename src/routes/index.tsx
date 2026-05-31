@@ -20,6 +20,7 @@ export const Route = createFileRoute("/")({
 
 type Ratio = "16:9" | "9:16" | "1:1";
 type Duration = 5 | 10;
+type Mode = "text" | "image";
 
 
 function CreatePage() {
@@ -27,6 +28,7 @@ function CreatePage() {
   const startGeneration = useServerFn(generateVideo);
   const checkVideoStatus = useServerFn(getVideoStatus);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const [mode, setMode] = useState<Mode>("image");
   const [prompt, setPrompt] = useState("");
   const [ratio, setRatio] = useState<Ratio>("16:9");
   const [duration, setDuration] = useState<Duration>(5);
