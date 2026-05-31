@@ -6,7 +6,7 @@ import { Loader2, Wand2, Film, Copy, Check, Coins } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { addStoryboard, type StoryboardItem, type StoryboardScene } from "@/lib/library";
+import { addStoryboard, type StoryboardScene } from "@/lib/library";
 import { supabase } from "@/integrations/supabase/client";
 import { generateStoryboard } from "@/lib/credits.functions";
 
@@ -85,13 +85,11 @@ function StoryboardPage() {
       const data = await runGenerate({ data: { story } });
       setBoard(data);
       qc.invalidateQueries({ queryKey: ["my-profile"] });
-      addStoryboard({
-        id: crypto.randomUUID(),
-        createdAt: Date.now(),
+      await addStoryboard({
         kind: "storyboard",
         story_title: data.story_title,
         scenes: data.scenes,
-      } satisfies StoryboardItem);
+      });
       toast.success(`Storyboard ready! ${data.credits_remaining} credits left.`, { id: toastId });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Storyboard failed";

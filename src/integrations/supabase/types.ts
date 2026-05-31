@@ -41,6 +41,42 @@ export type Database = {
         }
         Relationships: []
       }
+      library_items: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          media_url: string | null
+          payload: Json
+          prompt: string | null
+          thumbnail_url: string | null
+          title: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          media_url?: string | null
+          payload?: Json
+          prompt?: string | null
+          thumbnail_url?: string | null
+          title?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          media_url?: string | null
+          payload?: Json
+          prompt?: string | null
+          thumbnail_url?: string | null
+          title?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
