@@ -11,6 +11,7 @@ import {
 import { Home, Library, Plus, User } from "lucide-react";
 import { Toaster } from "@/components/ui/sonner";
 import { CreditBadge } from "@/components/CreditBadge";
+import avatar from "@/assets/welcome-avatar.jpg";
 import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
@@ -105,8 +106,12 @@ function Header() {
   return (
     <header className="mx-auto flex max-w-screen-md items-center justify-between gap-3 px-5 pt-6 pb-4">
       <div className="flex items-center gap-2.5">
-        <div className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-          <span className="font-display text-lg font-extrabold">D</span>
+        <div className="relative h-10 w-10 overflow-hidden rounded-full border-2 border-primary bg-card">
+          <img
+            src={avatar}
+            alt="DAMILOLAPOD AI"
+            className="h-full w-full object-cover object-[center_35%]"
+          />
         </div>
         <div className="leading-tight">
           <h1 className="font-display text-base font-extrabold tracking-tight">DAMILOLAPOD AI</h1>
