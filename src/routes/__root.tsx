@@ -8,7 +8,7 @@ import {
   Scripts,
   useLocation,
 } from "@tanstack/react-router";
-import { Video, Clock } from "lucide-react";
+import { Home, Image as ImageIcon, Video, Layers, Clock } from "lucide-react";
 import { Toaster } from "@/components/ui/sonner";
 import appCss from "../styles.css?url";
 
@@ -66,8 +66,11 @@ function RootShell({ children }: { children: React.ReactNode }) {
 function BottomNav() {
   const { pathname } = useLocation();
   const items = [
-    { to: "/", label: "Create", Icon: Video },
-    { to: "/history", label: "History", Icon: Clock },
+    { to: "/", label: "Home", Icon: Home },
+    { to: "/image", label: "Image", Icon: ImageIcon },
+    { to: "/video", label: "Video", Icon: Video },
+    { to: "/storyboard", label: "Board", Icon: Layers },
+    { to: "/history", label: "Saved", Icon: Clock },
   ];
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 backdrop-blur">
