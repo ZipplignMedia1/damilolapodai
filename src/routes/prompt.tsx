@@ -47,7 +47,7 @@ function PromptPage() {
       const res = await fetch("/api/video-prompt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idea, duration }),
+        body: JSON.stringify({ idea, duration, target }),
       });
       if (!res.ok) throw new Error((await res.text()) || `Failed (${res.status})`);
       const json = await res.json();
