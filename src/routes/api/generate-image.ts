@@ -18,6 +18,7 @@ type Body = {
   model?: ModelId;
   type?: ImageType;
   aspectRatio?: "1:1" | "16:9" | "9:16";
+  referenceImages?: string[]; // data URLs of character/avatar refs
 };
 
 const MODEL_MAP: Record<ModelId, string> = {
@@ -60,12 +61,22 @@ export const Route = createFileRoute("/api/generate-image")({
         const type = body.type ?? "photo";
         const directive = TYPE_DIRECTIVES[type] ?? TYPE_DIRECTIVES.photo;
 
+        const refs = (body.referenceImages ?? []).filter((u) => typeof u === "string" && u.startsWith("data:")).slice(0, 8);
+
         const fullPrompt = [
           directive,
           `Subject: ${body.prompt.trim()}.`,
           `Aspect ratio: ${ratio}.`,
+          refs.length
+            ? `Use the ${refs.length} reference image${refs.length > 1 ? "s" : ""} as the character/avatar/style reference. Preserve identity, face, outfit and key details from the references.`
+            : "",
           "Ultra detailed, high quality, no watermark, no text artifacts unless requested.",
-        ].join(" ");
+        ].filter(Boolean).join(" ");
+
+        const userContent: Array<Record<string, unknown>> = [{ type: "text", text: fullPrompt }];
+        for (const url of refs) {
+          userContent.push({ type: "image_url", image_url: { url } });
+        }
 
         try {
           const res = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
@@ -73,7 +84,7 @@ export const Route = createFileRoute("/api/generate-image")({
             headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
             body: JSON.stringify({
               model,
-              messages: [{ role: "user", content: fullPrompt }],
+              messages: [{ role: "user", content: refs.length ? userContent : fullPrompt }],
               modalities: ["image", "text"],
             }),
           });

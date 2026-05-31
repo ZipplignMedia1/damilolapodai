@@ -47,7 +47,7 @@ function ImagePage() {
   const [showType, setShowType] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [gens, setGens] = useState<Gen[]>([]);
-  const [attachment, setAttachment] = useState<{ name: string; dataUrl: string } | null>(null);
+  const [attachments, setAttachments] = useState<{ id: string; name: string; dataUrl: string }[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
   const feedRef = useRef<HTMLDivElement>(null);
   const progressTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -59,11 +59,16 @@ function ImagePage() {
   useEffect(() => () => { if (progressTimer.current) clearInterval(progressTimer.current); }, []);
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setAttachment({ name: file.name, dataUrl: String(reader.result) });
-    reader.readAsDataURL(file);
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    const remaining = Math.max(0, 8 - attachments.length);
+    if (files.length > remaining) toast.message(`Max 8 images. ${files.length - remaining} skipped.`);
+    files.slice(0, remaining).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () =>
+        setAttachments((prev) => [...prev, { id: crypto.randomUUID(), name: file.name, dataUrl: String(reader.result) }]);
+      reader.readAsDataURL(file);
+    });
     e.target.value = "";
   }
 
@@ -76,8 +81,8 @@ function ImagePage() {
     const gen: Gen = { id, prompt: currentPrompt, status: "loading", progress: 0, ratio: currentRatio };
     setGens((g) => [gen, ...g]);
     setPrompt("");
-    const initImage = attachment?.dataUrl;
-    setAttachment(null);
+    const referenceImages = attachments.map((a) => a.dataUrl);
+    setAttachments([]);
 
     let p = 0;
     if (progressTimer.current) clearInterval(progressTimer.current);
@@ -93,7 +98,7 @@ function ImagePage() {
       const res = await fetch("/api/generate-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: currentPrompt, model, type, aspectRatio: currentRatio, initImage }),
+        body: JSON.stringify({ prompt: currentPrompt, model, type, aspectRatio: currentRatio, referenceImages }),
       });
       if (!res.ok) throw new Error((await res.text()) || `Failed (${res.status})`);
       const { image } = (await res.json()) as { image: string };
@@ -152,17 +157,24 @@ function ImagePage() {
             </div>
           )}
           <div className="rounded-2xl border border-border bg-card/95 p-3 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.7)] backdrop-blur-xl">
-            {attachment && (
-              <div className="mb-2 flex items-center gap-2 rounded-lg border border-border bg-background/60 p-1.5 pr-2">
-                <img src={attachment.dataUrl} alt="attachment" className="h-8 w-8 rounded object-cover" />
-                <span className="flex-1 truncate text-[11px] text-muted-foreground">{attachment.name}</span>
-                <button onClick={() => setAttachment(null)} aria-label="Remove" className="text-muted-foreground hover:text-foreground">
-                  <X className="h-3.5 w-3.5" />
-                </button>
+            {attachments.length > 0 && (
+              <div className="mb-2 flex flex-wrap gap-1.5">
+                {attachments.map((a) => (
+                  <div key={a.id} className="group relative h-12 w-12 overflow-hidden rounded-lg border border-border bg-background/60">
+                    <img src={a.dataUrl} alt={a.name} className="h-full w-full object-cover" />
+                    <button
+                      onClick={() => setAttachments((prev) => prev.filter((p) => p.id !== a.id))}
+                      aria-label="Remove"
+                      className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-background/90 text-foreground shadow"
+                    >
+                      <X className="h-2.5 w-2.5" />
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
             <div className="flex items-end gap-2 rounded-xl bg-muted/30 p-2">
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+              <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFile} />
               <button
                 onClick={() => fileRef.current?.click()}
                 className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border bg-background/60 text-muted-foreground hover:text-foreground"
