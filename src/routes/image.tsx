@@ -174,7 +174,7 @@ function ImagePage() {
               </div>
             )}
             <div className="flex items-end gap-2 rounded-xl bg-muted/30 p-2">
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+              <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFile} />
               <button
                 onClick={() => fileRef.current?.click()}
                 className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border bg-background/60 text-muted-foreground hover:text-foreground"
