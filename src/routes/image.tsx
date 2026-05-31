@@ -157,13 +157,20 @@ function ImagePage() {
             </div>
           )}
           <div className="rounded-2xl border border-border bg-card/95 p-3 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.7)] backdrop-blur-xl">
-            {attachment && (
-              <div className="mb-2 flex items-center gap-2 rounded-lg border border-border bg-background/60 p-1.5 pr-2">
-                <img src={attachment.dataUrl} alt="attachment" className="h-8 w-8 rounded object-cover" />
-                <span className="flex-1 truncate text-[11px] text-muted-foreground">{attachment.name}</span>
-                <button onClick={() => setAttachment(null)} aria-label="Remove" className="text-muted-foreground hover:text-foreground">
-                  <X className="h-3.5 w-3.5" />
-                </button>
+            {attachments.length > 0 && (
+              <div className="mb-2 flex flex-wrap gap-1.5">
+                {attachments.map((a) => (
+                  <div key={a.id} className="group relative h-12 w-12 overflow-hidden rounded-lg border border-border bg-background/60">
+                    <img src={a.dataUrl} alt={a.name} className="h-full w-full object-cover" />
+                    <button
+                      onClick={() => setAttachments((prev) => prev.filter((p) => p.id !== a.id))}
+                      aria-label="Remove"
+                      className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-background/90 text-foreground shadow"
+                    >
+                      <X className="h-2.5 w-2.5" />
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
             <div className="flex items-end gap-2 rounded-xl bg-muted/30 p-2">
