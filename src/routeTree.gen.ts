@@ -9,11 +9,32 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VideoRouteImport } from './routes/video'
+import { Route as StoryboardRouteImport } from './routes/storyboard'
+import { Route as ImageRouteImport } from './routes/image'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiTransformImageRouteImport } from './routes/api/transform-image'
+import { Route as ApiStoryboardRouteImport } from './routes/api/storyboard'
 import { Route as ApiKeyframesRouteImport } from './routes/api/keyframes'
 import { Route as ApiGenerateVideoRouteImport } from './routes/api/generate-video'
+import { Route as ApiGenerateImageRouteImport } from './routes/api/generate-image'
 
+const VideoRoute = VideoRouteImport.update({
+  id: '/video',
+  path: '/video',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StoryboardRoute = StoryboardRouteImport.update({
+  id: '/storyboard',
+  path: '/storyboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ImageRoute = ImageRouteImport.update({
+  id: '/image',
+  path: '/image',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HistoryRoute = HistoryRouteImport.update({
   id: '/history',
   path: '/history',
@@ -22,6 +43,16 @@ const HistoryRoute = HistoryRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiTransformImageRoute = ApiTransformImageRouteImport.update({
+  id: '/api/transform-image',
+  path: '/api/transform-image',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiStoryboardRoute = ApiStoryboardRouteImport.update({
+  id: '/api/storyboard',
+  path: '/api/storyboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiKeyframesRoute = ApiKeyframesRouteImport.update({
@@ -34,43 +65,124 @@ const ApiGenerateVideoRoute = ApiGenerateVideoRouteImport.update({
   path: '/api/generate-video',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiGenerateImageRoute = ApiGenerateImageRouteImport.update({
+  id: '/api/generate-image',
+  path: '/api/generate-image',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/history': typeof HistoryRoute
+  '/image': typeof ImageRoute
+  '/storyboard': typeof StoryboardRoute
+  '/video': typeof VideoRoute
+  '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/generate-video': typeof ApiGenerateVideoRoute
   '/api/keyframes': typeof ApiKeyframesRoute
+  '/api/storyboard': typeof ApiStoryboardRoute
+  '/api/transform-image': typeof ApiTransformImageRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/history': typeof HistoryRoute
+  '/image': typeof ImageRoute
+  '/storyboard': typeof StoryboardRoute
+  '/video': typeof VideoRoute
+  '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/generate-video': typeof ApiGenerateVideoRoute
   '/api/keyframes': typeof ApiKeyframesRoute
+  '/api/storyboard': typeof ApiStoryboardRoute
+  '/api/transform-image': typeof ApiTransformImageRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/history': typeof HistoryRoute
+  '/image': typeof ImageRoute
+  '/storyboard': typeof StoryboardRoute
+  '/video': typeof VideoRoute
+  '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/generate-video': typeof ApiGenerateVideoRoute
   '/api/keyframes': typeof ApiKeyframesRoute
+  '/api/storyboard': typeof ApiStoryboardRoute
+  '/api/transform-image': typeof ApiTransformImageRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/history' | '/api/generate-video' | '/api/keyframes'
+  fullPaths:
+    | '/'
+    | '/history'
+    | '/image'
+    | '/storyboard'
+    | '/video'
+    | '/api/generate-image'
+    | '/api/generate-video'
+    | '/api/keyframes'
+    | '/api/storyboard'
+    | '/api/transform-image'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/history' | '/api/generate-video' | '/api/keyframes'
-  id: '__root__' | '/' | '/history' | '/api/generate-video' | '/api/keyframes'
+  to:
+    | '/'
+    | '/history'
+    | '/image'
+    | '/storyboard'
+    | '/video'
+    | '/api/generate-image'
+    | '/api/generate-video'
+    | '/api/keyframes'
+    | '/api/storyboard'
+    | '/api/transform-image'
+  id:
+    | '__root__'
+    | '/'
+    | '/history'
+    | '/image'
+    | '/storyboard'
+    | '/video'
+    | '/api/generate-image'
+    | '/api/generate-video'
+    | '/api/keyframes'
+    | '/api/storyboard'
+    | '/api/transform-image'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   HistoryRoute: typeof HistoryRoute
+  ImageRoute: typeof ImageRoute
+  StoryboardRoute: typeof StoryboardRoute
+  VideoRoute: typeof VideoRoute
+  ApiGenerateImageRoute: typeof ApiGenerateImageRoute
   ApiGenerateVideoRoute: typeof ApiGenerateVideoRoute
   ApiKeyframesRoute: typeof ApiKeyframesRoute
+  ApiStoryboardRoute: typeof ApiStoryboardRoute
+  ApiTransformImageRoute: typeof ApiTransformImageRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/video': {
+      id: '/video'
+      path: '/video'
+      fullPath: '/video'
+      preLoaderRoute: typeof VideoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/storyboard': {
+      id: '/storyboard'
+      path: '/storyboard'
+      fullPath: '/storyboard'
+      preLoaderRoute: typeof StoryboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/image': {
+      id: '/image'
+      path: '/image'
+      fullPath: '/image'
+      preLoaderRoute: typeof ImageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/history': {
       id: '/history'
       path: '/history'
@@ -83,6 +195,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/transform-image': {
+      id: '/api/transform-image'
+      path: '/api/transform-image'
+      fullPath: '/api/transform-image'
+      preLoaderRoute: typeof ApiTransformImageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/storyboard': {
+      id: '/api/storyboard'
+      path: '/api/storyboard'
+      fullPath: '/api/storyboard'
+      preLoaderRoute: typeof ApiStoryboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/keyframes': {
@@ -99,25 +225,28 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiGenerateVideoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/generate-image': {
+      id: '/api/generate-image'
+      path: '/api/generate-image'
+      fullPath: '/api/generate-image'
+      preLoaderRoute: typeof ApiGenerateImageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   HistoryRoute: HistoryRoute,
+  ImageRoute: ImageRoute,
+  StoryboardRoute: StoryboardRoute,
+  VideoRoute: VideoRoute,
+  ApiGenerateImageRoute: ApiGenerateImageRoute,
   ApiGenerateVideoRoute: ApiGenerateVideoRoute,
   ApiKeyframesRoute: ApiKeyframesRoute,
+  ApiStoryboardRoute: ApiStoryboardRoute,
+  ApiTransformImageRoute: ApiTransformImageRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
