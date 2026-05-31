@@ -121,13 +121,22 @@ function StoryboardPage() {
         />
       </div>
 
-      <Button onClick={handleGenerate} disabled={submitting} className="w-full h-14 rounded-xl text-base font-bold">
+      <Button onClick={handleGenerate} disabled={submitting || outOfCredits} className="w-full h-14 rounded-xl text-base font-bold">
         {submitting ? (
           <><Loader2 className="h-5 w-5 animate-spin" /> Generating…</>
         ) : (
-          <><Wand2 className="h-5 w-5" /> Generate Storyboard Prompts</>
+          <><Wand2 className="h-5 w-5" /> Generate · 1 credit</>
         )}
       </Button>
+
+      {outOfCredits && (
+        <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 text-center">
+          <Coins className="h-6 w-6 mx-auto mb-2 text-primary" />
+          <div className="text-sm font-bold">You're out of credits</div>
+          <p className="mt-1 text-xs text-muted-foreground">Top-ups are coming soon. Hang tight!</p>
+          <Link to="/" className="mt-3 inline-block text-xs font-semibold text-primary">← Back home</Link>
+        </div>
+      )}
 
       {board && (
         <div className="space-y-3">
