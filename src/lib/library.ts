@@ -14,6 +14,8 @@ export type StoryboardScene = {
   title: string;
   description: string;
   visual_prompt: string;
+  location?: string;
+  wardrobe?: string;
   camera: { angle: string; movement: string };
   lighting: string;
   emotion: string;
