@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as VideoRouteImport } from './routes/video'
 import { Route as StoryboardRouteImport } from './routes/storyboard'
 import { Route as PromptRouteImport } from './routes/prompt'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as ImageRouteImport } from './routes/image'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as IndexRouteImport } from './routes/index'
@@ -19,7 +20,6 @@ import { Route as ApiVideoPromptRouteImport } from './routes/api/video-prompt'
 import { Route as ApiVerifyGeminiRouteImport } from './routes/api/verify-gemini'
 import { Route as ApiTransformImageRouteImport } from './routes/api/transform-image'
 import { Route as ApiStoryboardSceneRouteImport } from './routes/api/storyboard-scene'
-import { Route as ApiStoryboardRouteImport } from './routes/api/storyboard'
 import { Route as ApiKeyframesRouteImport } from './routes/api/keyframes'
 import { Route as ApiGenerateVideoRouteImport } from './routes/api/generate-video'
 import { Route as ApiGenerateImageRouteImport } from './routes/api/generate-image'
@@ -37,6 +37,11 @@ const StoryboardRoute = StoryboardRouteImport.update({
 const PromptRoute = PromptRouteImport.update({
   id: '/prompt',
   path: '/prompt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ImageRoute = ImageRouteImport.update({
@@ -74,11 +79,6 @@ const ApiStoryboardSceneRoute = ApiStoryboardSceneRouteImport.update({
   path: '/api/storyboard-scene',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiStoryboardRoute = ApiStoryboardRouteImport.update({
-  id: '/api/storyboard',
-  path: '/api/storyboard',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiKeyframesRoute = ApiKeyframesRouteImport.update({
   id: '/api/keyframes',
   path: '/api/keyframes',
@@ -99,13 +99,13 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/history': typeof HistoryRoute
   '/image': typeof ImageRoute
+  '/login': typeof LoginRoute
   '/prompt': typeof PromptRoute
   '/storyboard': typeof StoryboardRoute
   '/video': typeof VideoRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/generate-video': typeof ApiGenerateVideoRoute
   '/api/keyframes': typeof ApiKeyframesRoute
-  '/api/storyboard': typeof ApiStoryboardRoute
   '/api/storyboard-scene': typeof ApiStoryboardSceneRoute
   '/api/transform-image': typeof ApiTransformImageRoute
   '/api/verify-gemini': typeof ApiVerifyGeminiRoute
@@ -115,13 +115,13 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/history': typeof HistoryRoute
   '/image': typeof ImageRoute
+  '/login': typeof LoginRoute
   '/prompt': typeof PromptRoute
   '/storyboard': typeof StoryboardRoute
   '/video': typeof VideoRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/generate-video': typeof ApiGenerateVideoRoute
   '/api/keyframes': typeof ApiKeyframesRoute
-  '/api/storyboard': typeof ApiStoryboardRoute
   '/api/storyboard-scene': typeof ApiStoryboardSceneRoute
   '/api/transform-image': typeof ApiTransformImageRoute
   '/api/verify-gemini': typeof ApiVerifyGeminiRoute
@@ -132,13 +132,13 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/history': typeof HistoryRoute
   '/image': typeof ImageRoute
+  '/login': typeof LoginRoute
   '/prompt': typeof PromptRoute
   '/storyboard': typeof StoryboardRoute
   '/video': typeof VideoRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/generate-video': typeof ApiGenerateVideoRoute
   '/api/keyframes': typeof ApiKeyframesRoute
-  '/api/storyboard': typeof ApiStoryboardRoute
   '/api/storyboard-scene': typeof ApiStoryboardSceneRoute
   '/api/transform-image': typeof ApiTransformImageRoute
   '/api/verify-gemini': typeof ApiVerifyGeminiRoute
@@ -150,13 +150,13 @@ export interface FileRouteTypes {
     | '/'
     | '/history'
     | '/image'
+    | '/login'
     | '/prompt'
     | '/storyboard'
     | '/video'
     | '/api/generate-image'
     | '/api/generate-video'
     | '/api/keyframes'
-    | '/api/storyboard'
     | '/api/storyboard-scene'
     | '/api/transform-image'
     | '/api/verify-gemini'
@@ -166,13 +166,13 @@ export interface FileRouteTypes {
     | '/'
     | '/history'
     | '/image'
+    | '/login'
     | '/prompt'
     | '/storyboard'
     | '/video'
     | '/api/generate-image'
     | '/api/generate-video'
     | '/api/keyframes'
-    | '/api/storyboard'
     | '/api/storyboard-scene'
     | '/api/transform-image'
     | '/api/verify-gemini'
@@ -182,13 +182,13 @@ export interface FileRouteTypes {
     | '/'
     | '/history'
     | '/image'
+    | '/login'
     | '/prompt'
     | '/storyboard'
     | '/video'
     | '/api/generate-image'
     | '/api/generate-video'
     | '/api/keyframes'
-    | '/api/storyboard'
     | '/api/storyboard-scene'
     | '/api/transform-image'
     | '/api/verify-gemini'
@@ -199,13 +199,13 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   HistoryRoute: typeof HistoryRoute
   ImageRoute: typeof ImageRoute
+  LoginRoute: typeof LoginRoute
   PromptRoute: typeof PromptRoute
   StoryboardRoute: typeof StoryboardRoute
   VideoRoute: typeof VideoRoute
   ApiGenerateImageRoute: typeof ApiGenerateImageRoute
   ApiGenerateVideoRoute: typeof ApiGenerateVideoRoute
   ApiKeyframesRoute: typeof ApiKeyframesRoute
-  ApiStoryboardRoute: typeof ApiStoryboardRoute
   ApiStoryboardSceneRoute: typeof ApiStoryboardSceneRoute
   ApiTransformImageRoute: typeof ApiTransformImageRoute
   ApiVerifyGeminiRoute: typeof ApiVerifyGeminiRoute
@@ -233,6 +233,13 @@ declare module '@tanstack/react-router' {
       path: '/prompt'
       fullPath: '/prompt'
       preLoaderRoute: typeof PromptRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/image': {
@@ -284,13 +291,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiStoryboardSceneRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/storyboard': {
-      id: '/api/storyboard'
-      path: '/api/storyboard'
-      fullPath: '/api/storyboard'
-      preLoaderRoute: typeof ApiStoryboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/keyframes': {
       id: '/api/keyframes'
       path: '/api/keyframes'
@@ -319,13 +319,13 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   HistoryRoute: HistoryRoute,
   ImageRoute: ImageRoute,
+  LoginRoute: LoginRoute,
   PromptRoute: PromptRoute,
   StoryboardRoute: StoryboardRoute,
   VideoRoute: VideoRoute,
   ApiGenerateImageRoute: ApiGenerateImageRoute,
   ApiGenerateVideoRoute: ApiGenerateVideoRoute,
   ApiKeyframesRoute: ApiKeyframesRoute,
-  ApiStoryboardRoute: ApiStoryboardRoute,
   ApiStoryboardSceneRoute: ApiStoryboardSceneRoute,
   ApiTransformImageRoute: ApiTransformImageRoute,
   ApiVerifyGeminiRoute: ApiVerifyGeminiRoute,

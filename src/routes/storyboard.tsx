@@ -1,10 +1,14 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { Loader2, Wand2, Film, Copy, Check } from "lucide-react";
+import { createFileRoute, redirect, Link, useRouter } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { Loader2, Wand2, Film, Copy, Check, Coins } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { addStoryboard, type StoryboardItem, type StoryboardScene } from "@/lib/library";
+import { supabase } from "@/integrations/supabase/client";
+import { generateStoryboard } from "@/lib/credits.functions";
 
 export const Route = createFileRoute("/storyboard")({
   head: () => ({
@@ -13,6 +17,12 @@ export const Route = createFileRoute("/storyboard")({
       { name: "description", content: "Turn any story into 9 cinematic text prompts with consistent location and wardrobe." },
     ],
   }),
+  beforeLoad: async ({ location }) => {
+    const { data } = await supabase.auth.getUser();
+    if (!data.user) {
+      throw redirect({ to: "/login", search: { redirect: location.href } as never });
+    }
+  },
   component: StoryboardPage,
 });
 
@@ -30,6 +40,18 @@ function StoryboardPage() {
   const [submitting, setSubmitting] = useState(false);
   const [board, setBoard] = useState<Storyboard | null>(null);
   const [copiedId, setCopiedId] = useState<number | "all" | null>(null);
+  const [outOfCredits, setOutOfCredits] = useState(false);
+  const qc = useQueryClient();
+  const router = useRouter();
+  const runGenerate = useServerFn(generateStoryboard);
+
+  // Listen for sign-out → bounce to login
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (!session) router.navigate({ to: "/login" });
+    });
+    return () => subscription.unsubscribe();
+  }, [router]);
 
   function buildScenePrompt(s: StoryboardScene, style: string) {
     return [
@@ -57,16 +79,12 @@ function StoryboardPage() {
     if (!story.trim()) return toast.error("Please enter a story idea");
     setSubmitting(true);
     setBoard(null);
-    const toastId = toast.loading("Writing 9-scene movie flow…");
+    setOutOfCredits(false);
+    const toastId = toast.loading("Spending 1 credit · writing 9-scene movie flow…");
     try {
-      const res = await fetch("/api/storyboard", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ story }),
-      });
-      if (!res.ok) throw new Error((await res.text()) || `Failed (${res.status})`);
-      const data = (await res.json()) as Storyboard;
+      const data = await runGenerate({ data: { story } });
       setBoard(data);
+      qc.invalidateQueries({ queryKey: ["my-profile"] });
       addStoryboard({
         id: crypto.randomUUID(),
         createdAt: Date.now(),
@@ -74,9 +92,15 @@ function StoryboardPage() {
         story_title: data.story_title,
         scenes: data.scenes,
       } satisfies StoryboardItem);
-      toast.success("Storyboard ready!", { id: toastId });
+      toast.success(`Storyboard ready! ${data.credits_remaining} credits left.`, { id: toastId });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Storyboard failed", { id: toastId });
+      const msg = err instanceof Error ? err.message : "Storyboard failed";
+      if (msg.includes("INSUFFICIENT_CREDITS")) {
+        setOutOfCredits(true);
+        toast.error("You're out of credits", { id: toastId });
+      } else {
+        toast.error(msg, { id: toastId });
+      }
     } finally {
       setSubmitting(false);
     }
@@ -97,13 +121,22 @@ function StoryboardPage() {
         />
       </div>
 
-      <Button onClick={handleGenerate} disabled={submitting} className="w-full h-14 rounded-xl text-base font-bold">
+      <Button onClick={handleGenerate} disabled={submitting || outOfCredits} className="w-full h-14 rounded-xl text-base font-bold">
         {submitting ? (
           <><Loader2 className="h-5 w-5 animate-spin" /> Generating…</>
         ) : (
-          <><Wand2 className="h-5 w-5" /> Generate Storyboard Prompts</>
+          <><Wand2 className="h-5 w-5" /> Generate · 1 credit</>
         )}
       </Button>
+
+      {outOfCredits && (
+        <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 text-center">
+          <Coins className="h-6 w-6 mx-auto mb-2 text-primary" />
+          <div className="text-sm font-bold">You're out of credits</div>
+          <p className="mt-1 text-xs text-muted-foreground">Top-ups are coming soon. Hang tight!</p>
+          <Link to="/" className="mt-3 inline-block text-xs font-semibold text-primary">← Back home</Link>
+        </div>
+      )}
 
       {board && (
         <div className="space-y-3">
