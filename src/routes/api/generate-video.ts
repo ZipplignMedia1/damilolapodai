@@ -7,11 +7,9 @@ type Body = {
   imageDataUrl?: string | null;
 };
 
-// fal.ai models — fast & cheap
-// text-to-video: fal-ai/ltx-video (very fast, ~5-10s)
-// image-to-video: fal-ai/ltx-video/image-to-video
-const TEXT_MODEL = "fal-ai/ltx-video";
-const IMAGE_MODEL = "fal-ai/ltx-video/image-to-video";
+// fal.ai Pixverse — cheapest video model (~$0.025/sec)
+const TEXT_MODEL = "fal-ai/pixverse/v4.5/text-to-video";
+const IMAGE_MODEL = "fal-ai/pixverse/v4.5/image-to-video";
 
 async function pollResult(statusUrl: string, key: string): Promise<unknown> {
   for (let i = 0; i < 90; i++) {
@@ -45,7 +43,8 @@ export const Route = createFileRoute("/api/generate-video")({
         const payload: Record<string, unknown> = {
           prompt: body.prompt,
           aspect_ratio: body.aspectRatio ?? "16:9",
-          num_frames: body.duration === 10 ? 161 : 121,
+          resolution: "720p",
+          duration: body.duration === 10 ? "8" : "5",
         };
         if (isImg) payload.image_url = body.imageDataUrl;
 
