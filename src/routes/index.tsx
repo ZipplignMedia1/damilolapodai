@@ -14,7 +14,7 @@ export const Route = createFileRoute("/")({
 
 function WelcomePage() {
   return (
-    <div className="relative flex min-h-[calc(100vh-8rem)] flex-col items-center justify-center px-6 text-center">
+    <div className="relative flex min-h-screen flex-col items-center justify-center px-6 text-center">
       {/* Ambient glow */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute left-1/2 top-1/3 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/25 blur-3xl" />
