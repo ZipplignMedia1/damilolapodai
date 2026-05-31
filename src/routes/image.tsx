@@ -22,7 +22,18 @@ const MODELS = [
 ] as const;
 type ModelId = (typeof MODELS)[number]["id"];
 const RATIOS: Ratio[] = ["1:1", "16:9", "9:16"];
-const STYLES = ["photorealistic", "cinematic", "3D render", "anime"] as const;
+const TYPES = [
+  { id: "photo", label: "Photo" },
+  { id: "graphic-design", label: "Graphic Design" },
+  { id: "book-cover", label: "Book Cover" },
+  { id: "face-portrait", label: "Face / Portrait" },
+  { id: "flyer", label: "Flyer" },
+  { id: "logo", label: "Logo" },
+  { id: "illustration", label: "Illustration" },
+  { id: "product", label: "Product Shot" },
+  { id: "prompt", label: "Prompt (Detailed)" },
+] as const;
+type ImageType = (typeof TYPES)[number]["id"];
 
 type Gen =
   | { id: string; prompt: string; status: "loading"; progress: number; ratio: Ratio }
