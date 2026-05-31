@@ -85,13 +85,11 @@ function StoryboardPage() {
       const data = await runGenerate({ data: { story } });
       setBoard(data);
       qc.invalidateQueries({ queryKey: ["my-profile"] });
-      addStoryboard({
-        id: crypto.randomUUID(),
-        createdAt: Date.now(),
+      await addStoryboard({
         kind: "storyboard",
         story_title: data.story_title,
         scenes: data.scenes,
-      } satisfies StoryboardItem);
+      });
       toast.success(`Storyboard ready! ${data.credits_remaining} credits left.`, { id: toastId });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Storyboard failed";
