@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowUp, Loader2, Download, Sparkles, Plus, X, ImageIcon } from "lucide-react";
+import { ArrowUp, Loader2, Download, Sparkles, Plus, X, ImageIcon, KeyRound, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { addImage } from "@/lib/library";
@@ -51,12 +51,35 @@ function ImagePage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const feedRef = useRef<HTMLDivElement>(null);
   const progressTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [keyStatus, setKeyStatus] = useState<"checking" | "ok" | "missing">("checking");
+  const [keyError, setKeyError] = useState<string | null>(null);
+
+  async function verifyKey() {
+    setKeyStatus("checking");
+    setKeyError(null);
+    try {
+      const res = await fetch("/api/verify-gemini");
+      const json = (await res.json()) as { ok: boolean; error?: string };
+      if (json.ok) {
+        setKeyStatus("ok");
+      } else {
+        setKeyStatus("missing");
+        setKeyError(json.error ?? "Key not valid");
+      }
+    } catch (err) {
+      setKeyStatus("missing");
+      setKeyError(err instanceof Error ? err.message : "Verification failed");
+    }
+  }
+
+  useEffect(() => { verifyKey(); }, []);
 
   useEffect(() => {
     feedRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   }, [gens.length]);
 
   useEffect(() => () => { if (progressTimer.current) clearInterval(progressTimer.current); }, []);
+
 
   async function downscale(file: File, max = 1024, quality = 0.82): Promise<string> {
     const dataUrl = await new Promise<string>((res, rej) => {
@@ -102,6 +125,8 @@ function ImagePage() {
 
   async function handleGenerate() {
     if (!prompt.trim()) return toast.error("Please enter a prompt");
+    if (keyStatus !== "ok") return toast.error("Gemini API key not set up. Verify it first.");
+
     const currentPrompt = prompt.trim();
     const currentRatio = ratio;
     setSubmitting(true);
