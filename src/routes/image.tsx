@@ -35,6 +35,7 @@ function ImagePage() {
   const [style, setStyle] = useState<(typeof STYLES)[number]>("photorealistic");
   const [ratio, setRatio] = useState<Ratio>("1:1");
   const [lighting, setLighting] = useState<(typeof LIGHTING)[number]>("natural");
+  const [model, setModel] = useState<ModelId>("nano-banana");
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
   const [strength, setStrength] = useState(60);
   const [styleTransfer, setStyleTransfer] = useState(false);
