@@ -108,8 +108,10 @@ async function renderVideo(options: {
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Could not start the video renderer.");
+  const ctxOrNull = canvas.getContext("2d");
+  if (!ctxOrNull) throw new Error("Could not start the video renderer.");
+  const ctx: CanvasRenderingContext2D = ctxOrNull;
+
 
   const fps = 30;
   const totalFrames = options.duration * fps;
