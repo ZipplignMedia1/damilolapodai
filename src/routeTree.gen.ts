@@ -20,7 +20,6 @@ import { Route as ApiVideoPromptRouteImport } from './routes/api/video-prompt'
 import { Route as ApiVerifyGeminiRouteImport } from './routes/api/verify-gemini'
 import { Route as ApiTransformImageRouteImport } from './routes/api/transform-image'
 import { Route as ApiStoryboardSceneRouteImport } from './routes/api/storyboard-scene'
-import { Route as ApiStoryboardRouteImport } from './routes/api/storyboard'
 import { Route as ApiKeyframesRouteImport } from './routes/api/keyframes'
 import { Route as ApiGenerateVideoRouteImport } from './routes/api/generate-video'
 import { Route as ApiGenerateImageRouteImport } from './routes/api/generate-image'
@@ -80,11 +79,6 @@ const ApiStoryboardSceneRoute = ApiStoryboardSceneRouteImport.update({
   path: '/api/storyboard-scene',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiStoryboardRoute = ApiStoryboardRouteImport.update({
-  id: '/api/storyboard',
-  path: '/api/storyboard',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiKeyframesRoute = ApiKeyframesRouteImport.update({
   id: '/api/keyframes',
   path: '/api/keyframes',
@@ -112,7 +106,6 @@ export interface FileRoutesByFullPath {
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/generate-video': typeof ApiGenerateVideoRoute
   '/api/keyframes': typeof ApiKeyframesRoute
-  '/api/storyboard': typeof ApiStoryboardRoute
   '/api/storyboard-scene': typeof ApiStoryboardSceneRoute
   '/api/transform-image': typeof ApiTransformImageRoute
   '/api/verify-gemini': typeof ApiVerifyGeminiRoute
@@ -129,7 +122,6 @@ export interface FileRoutesByTo {
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/generate-video': typeof ApiGenerateVideoRoute
   '/api/keyframes': typeof ApiKeyframesRoute
-  '/api/storyboard': typeof ApiStoryboardRoute
   '/api/storyboard-scene': typeof ApiStoryboardSceneRoute
   '/api/transform-image': typeof ApiTransformImageRoute
   '/api/verify-gemini': typeof ApiVerifyGeminiRoute
@@ -147,7 +139,6 @@ export interface FileRoutesById {
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/generate-video': typeof ApiGenerateVideoRoute
   '/api/keyframes': typeof ApiKeyframesRoute
-  '/api/storyboard': typeof ApiStoryboardRoute
   '/api/storyboard-scene': typeof ApiStoryboardSceneRoute
   '/api/transform-image': typeof ApiTransformImageRoute
   '/api/verify-gemini': typeof ApiVerifyGeminiRoute
@@ -166,7 +157,6 @@ export interface FileRouteTypes {
     | '/api/generate-image'
     | '/api/generate-video'
     | '/api/keyframes'
-    | '/api/storyboard'
     | '/api/storyboard-scene'
     | '/api/transform-image'
     | '/api/verify-gemini'
@@ -183,7 +173,6 @@ export interface FileRouteTypes {
     | '/api/generate-image'
     | '/api/generate-video'
     | '/api/keyframes'
-    | '/api/storyboard'
     | '/api/storyboard-scene'
     | '/api/transform-image'
     | '/api/verify-gemini'
@@ -200,7 +189,6 @@ export interface FileRouteTypes {
     | '/api/generate-image'
     | '/api/generate-video'
     | '/api/keyframes'
-    | '/api/storyboard'
     | '/api/storyboard-scene'
     | '/api/transform-image'
     | '/api/verify-gemini'
@@ -218,7 +206,6 @@ export interface RootRouteChildren {
   ApiGenerateImageRoute: typeof ApiGenerateImageRoute
   ApiGenerateVideoRoute: typeof ApiGenerateVideoRoute
   ApiKeyframesRoute: typeof ApiKeyframesRoute
-  ApiStoryboardRoute: typeof ApiStoryboardRoute
   ApiStoryboardSceneRoute: typeof ApiStoryboardSceneRoute
   ApiTransformImageRoute: typeof ApiTransformImageRoute
   ApiVerifyGeminiRoute: typeof ApiVerifyGeminiRoute
@@ -304,13 +291,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiStoryboardSceneRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/storyboard': {
-      id: '/api/storyboard'
-      path: '/api/storyboard'
-      fullPath: '/api/storyboard'
-      preLoaderRoute: typeof ApiStoryboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/keyframes': {
       id: '/api/keyframes'
       path: '/api/keyframes'
@@ -346,7 +326,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiGenerateImageRoute: ApiGenerateImageRoute,
   ApiGenerateVideoRoute: ApiGenerateVideoRoute,
   ApiKeyframesRoute: ApiKeyframesRoute,
-  ApiStoryboardRoute: ApiStoryboardRoute,
   ApiStoryboardSceneRoute: ApiStoryboardSceneRoute,
   ApiTransformImageRoute: ApiTransformImageRoute,
   ApiVerifyGeminiRoute: ApiVerifyGeminiRoute,

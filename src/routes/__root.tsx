@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-router";
 import { Home, Image as ImageIcon, Video, Layers, Clock, Code2 } from "lucide-react";
 import { Toaster } from "@/components/ui/sonner";
+import { CreditBadge } from "@/components/CreditBadge";
 import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
@@ -114,9 +115,7 @@ function Header() {
           <p className="text-[11px] text-muted-foreground">Your creative studio</p>
         </div>
       </div>
-      <Link to="/history" className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground">
-        Library
-      </Link>
+      <CreditBadge />
     </header>
   );
 }
