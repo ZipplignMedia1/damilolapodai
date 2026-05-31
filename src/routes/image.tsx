@@ -43,8 +43,8 @@ function ImagePage() {
   const [prompt, setPrompt] = useState("");
   const [model, setModel] = useState<ModelId>("nano-banana");
   const [ratio, setRatio] = useState<Ratio>("1:1");
-  const [style, setStyle] = useState<(typeof STYLES)[number]>("photorealistic");
-  const [showStyle, setShowStyle] = useState(false);
+  const [type, setType] = useState<ImageType>("photo");
+  const [showType, setShowType] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [gens, setGens] = useState<Gen[]>([]);
   const [attachment, setAttachment] = useState<{ name: string; dataUrl: string } | null>(null);
