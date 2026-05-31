@@ -51,8 +51,8 @@ function CreatePage() {
   }
 
   async function handleGenerate() {
-    if (!prompt.trim()) return toast.error("Please describe the motion");
-    if (!imageDataUrl) return toast.error("Please upload an image");
+    if (!prompt.trim()) return toast.error("Please describe the video");
+    if (mode === "image" && !imageDataUrl) return toast.error("Please upload an image");
     setSubmitting(true);
     const toastId = toast.loading("Submitting…");
     try {
