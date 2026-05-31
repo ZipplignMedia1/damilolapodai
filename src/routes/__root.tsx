@@ -11,6 +11,7 @@ import {
 import { Home, Library, Plus, User } from "lucide-react";
 import { Toaster } from "@/components/ui/sonner";
 import { CreditBadge } from "@/components/CreditBadge";
+import avatar from "@/assets/welcome-avatar.jpg";
 import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
