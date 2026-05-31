@@ -6,6 +6,8 @@ const SceneSchema = z.object({
   title: z.string(),
   description: z.string(),
   visual_prompt: z.string(),
+  location: z.string(),
+  wardrobe: z.string(),
   camera: z.object({
     angle: z.string(),
     movement: z.string(),
@@ -18,22 +20,41 @@ const StoryboardSchema = z.object({
   story_title: z.string(),
   style: z.string().default("ultra-realistic cinematic"),
   grid: z.string().default("3x3"),
+  location_bible: z.string(),
+  wardrobe_bible: z.string(),
   scenes: z.array(SceneSchema).length(9),
 });
 
 export type Storyboard = z.infer<typeof StoryboardSchema>;
 
-const SYSTEM = `You are a cinematic storyboard director. Convert the user's story into a 3x3 storyboard of EXACTLY 9 scenes. Each scene must be ultra-realistic cinematic. Return ONLY valid JSON matching this schema:
+const SYSTEM = `You are a cinematic storyboard director. Convert the user's story into a 9-scene movie sequence with a clear narrative arc:
+1-2: SETUP (establish character, world, mood)
+3-4: INCITING INCIDENT / RISING ACTION
+5-6: CONFLICT / PEAK TENSION
+7-8: CLIMAX / TURNING POINT
+9: RESOLUTION
+
+CRITICAL CONSISTENCY RULES:
+- Establish a "location_bible": detailed description of the main setting (architecture, props, color palette, time of day progression). Reuse this exact description across every scene unless the story demands a location change.
+- Establish a "wardrobe_bible": detailed description of each character's outfit (fabric, color, accessories, hair). The SAME wardrobe must persist across all 9 scenes (unless the story is multi-day).
+- Every scene's "location" and "wardrobe" fields must reference the bibles verbatim so the AI image model keeps continuity.
+- Each scene should feel like a continuous film, not isolated images.
+
+Return ONLY valid JSON matching this schema:
 {
   "story_title": string,
   "style": "ultra-realistic cinematic",
   "grid": "3x3",
+  "location_bible": "detailed reusable location description",
+  "wardrobe_bible": "detailed reusable wardrobe description per character",
   "scenes": [
     {
       "scene_number": 1-9,
       "title": "short scene title",
-      "description": "what is happening",
-      "visual_prompt": "ultra-realistic cinematic visual description with environment detail",
+      "description": "what is happening (story beat)",
+      "visual_prompt": "ultra-realistic cinematic visual description for THIS beat",
+      "location": "exact reference to location_bible + scene-specific framing",
+      "wardrobe": "exact reference to wardrobe_bible for characters in shot",
       "camera": { "angle": "close-up | wide | medium | over-the-shoulder | two-shot", "movement": "static | pan | dolly | handheld | slow zoom" },
       "lighting": "natural | moody | dramatic | soft | bright",
       "emotion": "feeling of the scene"
