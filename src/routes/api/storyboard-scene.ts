@@ -4,6 +4,17 @@ type Body = {
   prompt: string;
   characterImages?: string[]; // data URLs
   style?: string;
+  aspectRatio?: "1:1" | "16:9" | "9:16" | "4:3" | "3:4";
+  location?: string;
+  wardrobe?: string;
+};
+
+const ratioGuidance: Record<string, string> = {
+  "1:1": "square 1:1 framing",
+  "16:9": "widescreen cinematic 16:9 landscape framing",
+  "9:16": "vertical 9:16 mobile/reels framing",
+  "4:3": "classic 4:3 framing",
+  "3:4": "portrait 3:4 framing",
 };
 
 export const Route = createFileRoute("/api/storyboard-scene")({
@@ -16,7 +27,16 @@ export const Route = createFileRoute("/api/storyboard-scene")({
         if (!body.prompt?.trim()) return new Response("prompt required", { status: 400 });
 
         const style = body.style?.trim() || "ultra-realistic cinematic";
-        const fullPrompt = `${body.prompt.trim()}. Style: ${style}. Keep the provided character(s) consistent in face, body, hair, and outfit. High detail, cinematic lighting, film grain.`;
+        const ratio = ratioGuidance[body.aspectRatio ?? "1:1"];
+        const parts = [
+          body.prompt.trim(),
+          body.location ? `LOCATION (must stay identical across scenes): ${body.location}` : "",
+          body.wardrobe ? `WARDROBE (must stay identical across scenes): ${body.wardrobe}` : "",
+          `Style: ${style}.`,
+          `Framing: ${ratio}.`,
+          "Keep the provided character(s) consistent in face, body, hair, and outfit. Keep the location architecture, props, and color palette identical to previous scenes. High detail, cinematic lighting, film grain.",
+        ].filter(Boolean);
+        const fullPrompt = parts.join(" ");
 
         const content: Array<
           { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }
