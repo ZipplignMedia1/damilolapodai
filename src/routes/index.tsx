@@ -85,7 +85,7 @@ function CreatePage() {
       addToHistory({
         id: crypto.randomUUID(),
         createdAt: Date.now(),
-        mode: "image",
+        mode,
         prompt,
         aspectRatio: ratio,
         duration,
