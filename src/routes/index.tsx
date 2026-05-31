@@ -210,7 +210,7 @@ function CreatePage() {
           <><Wand2 className="h-5 w-5" /> Generate Video</>
         )}
       </Button>
-      <p className="text-center text-xs text-muted-foreground">Kling + MMAudio · with sound · ~3–5 minutes</p>
+      <p className="text-center text-xs text-muted-foreground">Pollinations LTX-2 · free tier · ~1–2 minutes</p>
     </div>
   );
 }
