@@ -2,14 +2,16 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Clock, Download, Trash2, Video, Image as ImageIcon, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getHistory, getHistoryWithVideos, removeFromHistory, type HistoryItem } from "@/lib/history";
 import {
   getImages,
   removeImage,
   getStoryboards,
   removeStoryboard,
+  getVideos,
+  removeVideo,
   type ImageItem,
   type StoryboardItem,
+  type VideoItem,
 } from "@/lib/library";
 
 export const Route = createFileRoute("/history")({
@@ -26,31 +28,42 @@ type Tab = "videos" | "images" | "storyboards";
 
 function HistoryPage() {
   const [tab, setTab] = useState<Tab>("videos");
-  const [videos, setVideos] = useState<HistoryItem[]>([]);
+  const [videos, setVideos] = useState<VideoItem[]>([]);
   const [images, setImages] = useState<ImageItem[]>([]);
   const [storyboards, setStoryboards] = useState<StoryboardItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  async function refresh() {
+    const [v, i, s] = await Promise.all([getVideos(), getImages(), getStoryboards()]);
+    setVideos(v);
+    setImages(i);
+    setStoryboards(s);
+    setLoading(false);
+  }
 
   useEffect(() => {
-    void getHistoryWithVideos().then(setVideos);
-    setImages(getImages());
-    setStoryboards(getStoryboards());
+    void refresh();
   }, []);
 
   async function delVideo(id: string) {
-    await removeFromHistory(id);
-    setVideos(getHistory());
+    await removeVideo(id);
+    setVideos((prev) => prev.filter((v) => v.id !== id));
   }
-  function delImage(id: string) {
-    removeImage(id);
-    setImages(getImages());
+  async function delImage(id: string) {
+    await removeImage(id);
+    setImages((prev) => prev.filter((v) => v.id !== id));
   }
-  function delStory(id: string) {
-    removeStoryboard(id);
-    setStoryboards(getStoryboards());
+  async function delStory(id: string) {
+    await removeStoryboard(id);
+    setStoryboards((prev) => prev.filter((v) => v.id !== id));
   }
 
   const counts = { videos: videos.length, images: images.length, storyboards: storyboards.length };
   const total = counts.videos + counts.images + counts.storyboards;
+
+  if (loading) {
+    return <p className="py-20 text-center text-sm text-muted-foreground">Loading your library…</p>;
+  }
 
   if (total === 0) {
     return (
@@ -93,8 +106,8 @@ function HistoryPage() {
                 <video src={item.videoUrl} controls playsInline poster={item.thumbnail} className="w-full bg-black aspect-video object-contain" />
                 <div className="p-4">
                   <div className="flex items-center gap-2 text-[11px]">
-                    <span className="rounded-full bg-primary-soft px-2 py-0.5 font-semibold text-primary uppercase">{item.mode}</span>
-                    <span className="text-muted-foreground">{item.aspectRatio} · {item.duration}s</span>
+                    {item.mode && <span className="rounded-full bg-primary-soft px-2 py-0.5 font-semibold text-primary uppercase">{item.mode}</span>}
+                    <span className="text-muted-foreground">{item.aspectRatio ?? ""} {item.duration ? `· ${item.duration}s` : ""}</span>
                     <span className="ml-auto text-muted-foreground">{new Date(item.createdAt).toLocaleString()}</span>
                   </div>
                   <p className="mt-2 text-sm line-clamp-2">{item.prompt}</p>
