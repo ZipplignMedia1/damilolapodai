@@ -135,17 +135,17 @@ function ImagePage() {
       {/* Sticky composer */}
       <div className="fixed bottom-[88px] left-0 right-0 z-30 px-4">
         <div className="mx-auto max-w-screen-md">
-          {showStyle && (
+          {showType && (
             <div className="mb-2 rounded-lg border border-border bg-card/95 p-3 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)] backdrop-blur-xl">
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Style</p>
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Type</p>
               <div className="flex flex-wrap gap-1.5">
-                {STYLES.map((s) => (
+                {TYPES.map((t) => (
                   <button
-                    key={s}
-                    onClick={() => setStyle(s)}
-                    className={`rounded-md border px-3 py-1 text-xs font-medium capitalize transition ${style === s ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground"}`}
+                    key={t.id}
+                    onClick={() => { setType(t.id); setShowType(false); }}
+                    className={`rounded-md border px-3 py-1 text-xs font-medium transition ${type === t.id ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground"}`}
                   >
-                    {s}
+                    {t.label}
                   </button>
                 ))}
               </div>
