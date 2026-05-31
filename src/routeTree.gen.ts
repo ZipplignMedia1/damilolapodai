@@ -15,6 +15,7 @@ import { Route as PromptRouteImport } from './routes/prompt'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ImageRouteImport } from './routes/image'
+import { Route as HomeRouteImport } from './routes/home'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiVideoPromptRouteImport } from './routes/api/video-prompt'
@@ -53,6 +54,11 @@ const LoginRoute = LoginRouteImport.update({
 const ImageRoute = ImageRouteImport.update({
   id: '/image',
   path: '/image',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HomeRoute = HomeRouteImport.update({
+  id: '/home',
+  path: '/home',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HistoryRoute = HistoryRouteImport.update({
@@ -104,6 +110,7 @@ const ApiGenerateImageRoute = ApiGenerateImageRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/history': typeof HistoryRoute
+  '/home': typeof HomeRoute
   '/image': typeof ImageRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
@@ -121,6 +128,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/history': typeof HistoryRoute
+  '/home': typeof HomeRoute
   '/image': typeof ImageRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
@@ -139,6 +147,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/history': typeof HistoryRoute
+  '/home': typeof HomeRoute
   '/image': typeof ImageRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
@@ -158,6 +167,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/history'
+    | '/home'
     | '/image'
     | '/login'
     | '/profile'
@@ -175,6 +185,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/history'
+    | '/home'
     | '/image'
     | '/login'
     | '/profile'
@@ -192,6 +203,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/history'
+    | '/home'
     | '/image'
     | '/login'
     | '/profile'
@@ -210,6 +222,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   HistoryRoute: typeof HistoryRoute
+  HomeRoute: typeof HomeRoute
   ImageRoute: typeof ImageRoute
   LoginRoute: typeof LoginRoute
   ProfileRoute: typeof ProfileRoute
@@ -267,6 +280,13 @@ declare module '@tanstack/react-router' {
       path: '/image'
       fullPath: '/image'
       preLoaderRoute: typeof ImageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/home': {
+      id: '/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof HomeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/history': {
@@ -338,6 +358,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   HistoryRoute: HistoryRoute,
+  HomeRoute: HomeRoute,
   ImageRoute: ImageRoute,
   LoginRoute: LoginRoute,
   ProfileRoute: ProfileRoute,
