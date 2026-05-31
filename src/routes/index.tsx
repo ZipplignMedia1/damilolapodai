@@ -5,7 +5,7 @@ import avatar from "@/assets/welcome-avatar.jpg";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "DAMILOLAPO AI — Create with AI" },
+      { title: "DAMILOLAPOD AI — Create with AI" },
       { name: "description", content: "Generate images, videos, and cinematic storyboards from your ideas." },
     ],
   }),
@@ -27,7 +27,7 @@ function WelcomePage() {
         <div className="relative h-44 w-44 overflow-hidden rounded-full border-4 border-primary/40 bg-card shadow-[var(--shadow-glow)]">
           <img
             src={avatar}
-            alt="DAMILOLAPO AI"
+            alt="DAMILOLAPOD AI"
             className="h-full w-full object-cover object-top"
           />
         </div>
@@ -35,7 +35,7 @@ function WelcomePage() {
 
       {/* Title */}
       <h1 className="relative mt-8 font-display text-4xl font-extrabold tracking-tight">
-        DAMILOLAPO <span className="text-primary">AI</span>
+        DAMILOLAPOD <span className="text-primary">AI</span>
       </h1>
       <p className="relative mt-3 max-w-xs text-sm text-muted-foreground">
         Your creative companion for images, videos, and cinematic storyboards.
