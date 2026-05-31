@@ -108,7 +108,7 @@ function ImagePage() {
 
   async function handleGenerate() {
     if (!prompt.trim()) return toast.error("Please enter a prompt");
-    if (keyStatus !== "ok") return toast.error("Gemini API key not set up. Verify it first.");
+    
 
     const currentPrompt = prompt.trim();
     const currentRatio = ratio;
@@ -157,7 +157,7 @@ function ImagePage() {
 
   return (
     <div className="flex flex-col gap-4 pb-[260px]">
-      <KeySetupBanner status={keyStatus} error={keyError} onRetry={verifyKey} />
+      <FreeBanner />
       <div ref={feedRef} className="flex flex-col gap-3">
 
         {gens.length === 0 ? (
