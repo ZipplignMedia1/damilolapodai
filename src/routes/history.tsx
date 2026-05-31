@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Clock, Download, Trash2, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getHistory, removeFromHistory, type HistoryItem } from "@/lib/history";
+import { getHistory, getHistoryWithVideos, removeFromHistory, type HistoryItem } from "@/lib/history";
 
 export const Route = createFileRoute("/history")({
   head: () => ({
@@ -17,10 +17,12 @@ export const Route = createFileRoute("/history")({
 function HistoryPage() {
   const [items, setItems] = useState<HistoryItem[]>([]);
 
-  useEffect(() => { setItems(getHistory()); }, []);
+  useEffect(() => {
+    void getHistoryWithVideos().then(setItems);
+  }, []);
 
-  function handleDelete(id: string) {
-    removeFromHistory(id);
+  async function handleDelete(id: string) {
+    await removeFromHistory(id);
     setItems(getHistory());
   }
 
