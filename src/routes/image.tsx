@@ -140,24 +140,24 @@ function ImagePage() {
               </div>
             </div>
           )}
-          <div className="rounded-xl border border-border bg-card/95 p-2.5 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.7)] backdrop-blur-xl">
+          <div className="rounded-2xl border border-border bg-card/95 p-3 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.7)] backdrop-blur-xl">
             {attachment && (
-              <div className="mb-2 flex items-center gap-2 rounded-md border border-border bg-background/60 p-1.5 pr-2">
-                <img src={attachment.dataUrl} alt="attachment" className="h-10 w-10 rounded object-cover" />
+              <div className="mb-2 flex items-center gap-2 rounded-lg border border-border bg-background/60 p-1.5 pr-2">
+                <img src={attachment.dataUrl} alt="attachment" className="h-8 w-8 rounded object-cover" />
                 <span className="flex-1 truncate text-[11px] text-muted-foreground">{attachment.name}</span>
                 <button onClick={() => setAttachment(null)} aria-label="Remove" className="text-muted-foreground hover:text-foreground">
                   <X className="h-3.5 w-3.5" />
                 </button>
               </div>
             )}
-            <div className="flex items-end gap-2 px-1 pt-1">
+            <div className="flex items-end gap-2 rounded-xl bg-muted/30 p-2">
               <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
               <button
                 onClick={() => fileRef.current?.click()}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border bg-background/60 text-muted-foreground hover:text-foreground"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border bg-background/60 text-muted-foreground hover:text-foreground"
                 aria-label="Upload image"
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="h-3.5 w-3.5" />
               </button>
               <Textarea
                 value={prompt}
@@ -170,22 +170,22 @@ function ImagePage() {
                 }}
                 placeholder="Type prompt…"
                 rows={1}
-                className="min-h-[36px] max-h-32 flex-1 resize-none border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
+                className="min-h-[28px] max-h-32 flex-1 resize-none border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
               />
               <button
                 onClick={handleGenerate}
                 disabled={submitting || !prompt.trim()}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[var(--gradient-primary)] text-primary-foreground shadow-[var(--shadow-glow)] transition disabled:opacity-50"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--gradient-primary)] text-primary-foreground shadow-[var(--shadow-glow)] transition disabled:opacity-50"
                 aria-label="Generate"
               >
-                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
+                {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowUp className="h-3.5 w-3.5" />}
               </button>
             </div>
-            <div className="mt-2 flex items-center justify-between gap-2 px-1">
+            <div className="mt-2.5 flex items-center justify-between gap-2 px-0.5">
               <select
                 value={model}
                 onChange={(e) => setModel(e.target.value as ModelId)}
-                className="rounded-md border border-border bg-background/60 px-2 py-1 text-[11px] font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                className="rounded-lg border border-border bg-background/60 px-2 py-1 text-[11px] font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               >
                 {MODELS.map((m) => (
                   <option key={m.id} value={m.id}>{m.label}</option>
