@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as VideoRouteImport } from './routes/video'
 import { Route as StoryboardRouteImport } from './routes/storyboard'
 import { Route as PromptRouteImport } from './routes/prompt'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ImageRouteImport } from './routes/image'
 import { Route as HistoryRouteImport } from './routes/history'
@@ -37,6 +38,11 @@ const StoryboardRoute = StoryboardRouteImport.update({
 const PromptRoute = PromptRouteImport.update({
   id: '/prompt',
   path: '/prompt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -100,6 +106,7 @@ export interface FileRoutesByFullPath {
   '/history': typeof HistoryRoute
   '/image': typeof ImageRoute
   '/login': typeof LoginRoute
+  '/profile': typeof ProfileRoute
   '/prompt': typeof PromptRoute
   '/storyboard': typeof StoryboardRoute
   '/video': typeof VideoRoute
@@ -116,6 +123,7 @@ export interface FileRoutesByTo {
   '/history': typeof HistoryRoute
   '/image': typeof ImageRoute
   '/login': typeof LoginRoute
+  '/profile': typeof ProfileRoute
   '/prompt': typeof PromptRoute
   '/storyboard': typeof StoryboardRoute
   '/video': typeof VideoRoute
@@ -133,6 +141,7 @@ export interface FileRoutesById {
   '/history': typeof HistoryRoute
   '/image': typeof ImageRoute
   '/login': typeof LoginRoute
+  '/profile': typeof ProfileRoute
   '/prompt': typeof PromptRoute
   '/storyboard': typeof StoryboardRoute
   '/video': typeof VideoRoute
@@ -151,6 +160,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/image'
     | '/login'
+    | '/profile'
     | '/prompt'
     | '/storyboard'
     | '/video'
@@ -167,6 +177,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/image'
     | '/login'
+    | '/profile'
     | '/prompt'
     | '/storyboard'
     | '/video'
@@ -183,6 +194,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/image'
     | '/login'
+    | '/profile'
     | '/prompt'
     | '/storyboard'
     | '/video'
@@ -200,6 +212,7 @@ export interface RootRouteChildren {
   HistoryRoute: typeof HistoryRoute
   ImageRoute: typeof ImageRoute
   LoginRoute: typeof LoginRoute
+  ProfileRoute: typeof ProfileRoute
   PromptRoute: typeof PromptRoute
   StoryboardRoute: typeof StoryboardRoute
   VideoRoute: typeof VideoRoute
@@ -233,6 +246,13 @@ declare module '@tanstack/react-router' {
       path: '/prompt'
       fullPath: '/prompt'
       preLoaderRoute: typeof PromptRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -320,6 +340,7 @@ const rootRouteChildren: RootRouteChildren = {
   HistoryRoute: HistoryRoute,
   ImageRoute: ImageRoute,
   LoginRoute: LoginRoute,
+  ProfileRoute: ProfileRoute,
   PromptRoute: PromptRoute,
   StoryboardRoute: StoryboardRoute,
   VideoRoute: VideoRoute,
@@ -334,3 +355,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

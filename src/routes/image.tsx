@@ -14,7 +14,7 @@ export const Route = createFileRoute("/image")({
 function ComingSoon() {
   return (
     <div className="flex min-h-[60vh] items-center justify-center">
-      <div className="w-full rounded-3xl border border-border bg-[var(--gradient-surface)] p-8 text-center">
+      <div className="w-full rounded-3xl border border-border bg-card p-8 text-center">
         <div className="mx-auto mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-card/70 backdrop-blur">
           <ImageIcon className="h-6 w-6 text-primary" />
         </div>
