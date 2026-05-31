@@ -54,28 +54,8 @@ function ImagePage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const feedRef = useRef<HTMLDivElement>(null);
   const progressTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [keyStatus, setKeyStatus] = useState<"checking" | "ok" | "missing">("checking");
-  const [keyError, setKeyError] = useState<string | null>(null);
 
-  async function verifyKey() {
-    setKeyStatus("checking");
-    setKeyError(null);
-    try {
-      const res = await fetch("/api/verify-gemini");
-      const json = (await res.json()) as { ok: boolean; error?: string };
-      if (json.ok) {
-        setKeyStatus("ok");
-      } else {
-        setKeyStatus("missing");
-        setKeyError(json.error ?? "Key not valid");
-      }
-    } catch (err) {
-      setKeyStatus("missing");
-      setKeyError(err instanceof Error ? err.message : "Verification failed");
-    }
-  }
 
-  useEffect(() => { verifyKey(); }, []);
 
   useEffect(() => {
     feedRef.current?.scrollTo({ top: 0, behavior: "smooth" });
