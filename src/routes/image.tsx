@@ -21,6 +21,11 @@ type Mode = "text" | "transform";
 type Ratio = "1:1" | "16:9" | "9:16";
 
 const STYLES = ["photorealistic", "cinematic", "3D render", "anime"] as const;
+const MODELS = [
+  { id: "nano-banana", label: "Nano Banana" },
+  { id: "nano-banana-pro", label: "Nano Banana Pro" },
+] as const;
+type ModelId = (typeof MODELS)[number]["id"];
 const LIGHTING = ["studio", "natural", "dramatic"] as const;
 
 function ImagePage() {
@@ -30,6 +35,7 @@ function ImagePage() {
   const [style, setStyle] = useState<(typeof STYLES)[number]>("photorealistic");
   const [ratio, setRatio] = useState<Ratio>("1:1");
   const [lighting, setLighting] = useState<(typeof LIGHTING)[number]>("natural");
+  const [model, setModel] = useState<ModelId>("nano-banana");
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
   const [strength, setStrength] = useState(60);
   const [styleTransfer, setStyleTransfer] = useState(false);
@@ -54,7 +60,7 @@ function ImagePage() {
       const endpoint = mode === "text" ? "/api/generate-image" : "/api/transform-image";
       const payload =
         mode === "text"
-          ? { prompt, style, aspectRatio: ratio, lighting }
+          ? { prompt, model, style, aspectRatio: ratio, lighting }
           : { prompt, imageDataUrl, strength, styleTransfer };
       const res = await fetch(endpoint, {
         method: "POST",
@@ -150,6 +156,20 @@ function ImagePage() {
 
         {mode === "text" ? (
           <div className="mt-5 space-y-4">
+            <div>
+              <label className="text-sm font-semibold">Model</label>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {MODELS.map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => setModel(m.id)}
+                    className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${model === m.id ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground"}`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <Selector label="Style" options={STYLES} value={style} onChange={setStyle} />
             <Selector label="Aspect ratio" options={["1:1", "16:9", "9:16"] as const} value={ratio} onChange={setRatio} />
             <Selector label="Lighting" options={LIGHTING} value={lighting} onChange={setLighting} />
