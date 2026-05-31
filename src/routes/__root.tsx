@@ -79,33 +79,43 @@ function BottomNav() {
     { to: "/history", label: "Saved", Icon: Clock },
   ];
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 backdrop-blur">
-      <div className="mx-auto flex max-w-screen-md items-center justify-around px-6 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
-        {items.map(({ to, label, Icon }) => {
-          const active = pathname === to;
-          return (
-            <Link key={to} to={to} className={`flex flex-col items-center gap-1 text-xs font-medium ${active ? "text-primary" : "text-muted-foreground"}`}>
-              <Icon className="h-6 w-6" strokeWidth={active ? 2.25 : 1.75} />
-              {label}
-            </Link>
-          );
-        })}
+    <nav className="fixed bottom-0 left-0 right-0 z-40">
+      <div className="mx-auto max-w-screen-md px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
+        <div className="flex items-center justify-around rounded-2xl border border-border bg-card/80 px-2 py-2 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.6)] backdrop-blur-xl">
+          {items.map(({ to, label, Icon }) => {
+            const active = pathname === to;
+            return (
+              <Link
+                key={to}
+                to={to}
+                className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl px-2 py-1.5 text-[10px] font-semibold transition ${active ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                <Icon className="h-5 w-5" strokeWidth={active ? 2.5 : 1.75} />
+                {label}
+              </Link>
+            );
+          })}
+        </div>
       </div>
-      <div className="mx-auto h-1 w-32 rounded-full bg-foreground/30 mb-1" />
     </nav>
   );
 }
 
 function Header() {
   return (
-    <header className="mx-auto flex max-w-screen-md items-center gap-3 px-5 pt-6 pb-4">
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-        <Video className="h-6 w-6" />
+    <header className="mx-auto flex max-w-screen-md items-center justify-between gap-3 px-5 pt-6 pb-4">
+      <div className="flex items-center gap-2.5">
+        <div className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--gradient-primary)] text-primary-foreground shadow-[var(--shadow-glow)]">
+          <span className="font-display text-lg font-extrabold">D</span>
+        </div>
+        <div className="leading-tight">
+          <h1 className="font-display text-base font-extrabold tracking-tight">DAMILOLAPOD AI</h1>
+          <p className="text-[11px] text-muted-foreground">Your creative studio</p>
+        </div>
       </div>
-      <div>
-        <h1 className="text-xl font-bold tracking-tight">DAMILOLAPOD AI</h1>
-        <p className="text-sm text-muted-foreground">Create videos with AI</p>
-      </div>
+      <Link to="/history" className="rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground">
+        Library
+      </Link>
     </header>
   );
 }
@@ -114,12 +124,14 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen bg-background pb-28">
-        <Header />
-        <div className="border-t border-border" />
-        <main className="mx-auto max-w-screen-md px-4 pt-4">
-          <Outlet />
-        </main>
+      <div className="relative min-h-screen overflow-hidden bg-background pb-28">
+        <div className="pointer-events-none absolute -top-40 left-1/2 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-primary/20 blur-3xl" />
+        <div className="relative">
+          <Header />
+          <main className="mx-auto max-w-screen-md px-4 pt-2">
+            <Outlet />
+          </main>
+        </div>
         <BottomNav />
         <Toaster position="top-center" />
       </div>
