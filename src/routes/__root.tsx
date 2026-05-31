@@ -121,7 +121,7 @@ function Header() {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const { pathname } = useLocation();
-  const isWelcome = pathname === "/";
+  const isChromeHidden = pathname === "/" || pathname === "/login";
 
   return (
     <QueryClientProvider client={queryClient}>
