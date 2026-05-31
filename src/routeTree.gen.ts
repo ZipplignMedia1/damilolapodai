@@ -17,6 +17,7 @@ import { Route as HistoryRouteImport } from './routes/history'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiVideoPromptRouteImport } from './routes/api/video-prompt'
 import { Route as ApiTransformImageRouteImport } from './routes/api/transform-image'
+import { Route as ApiStoryboardSceneRouteImport } from './routes/api/storyboard-scene'
 import { Route as ApiStoryboardRouteImport } from './routes/api/storyboard'
 import { Route as ApiKeyframesRouteImport } from './routes/api/keyframes'
 import { Route as ApiGenerateVideoRouteImport } from './routes/api/generate-video'
@@ -62,6 +63,11 @@ const ApiTransformImageRoute = ApiTransformImageRouteImport.update({
   path: '/api/transform-image',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiStoryboardSceneRoute = ApiStoryboardSceneRouteImport.update({
+  id: '/api/storyboard-scene',
+  path: '/api/storyboard-scene',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiStoryboardRoute = ApiStoryboardRouteImport.update({
   id: '/api/storyboard',
   path: '/api/storyboard',
@@ -94,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/api/generate-video': typeof ApiGenerateVideoRoute
   '/api/keyframes': typeof ApiKeyframesRoute
   '/api/storyboard': typeof ApiStoryboardRoute
+  '/api/storyboard-scene': typeof ApiStoryboardSceneRoute
   '/api/transform-image': typeof ApiTransformImageRoute
   '/api/video-prompt': typeof ApiVideoPromptRoute
 }
@@ -108,6 +115,7 @@ export interface FileRoutesByTo {
   '/api/generate-video': typeof ApiGenerateVideoRoute
   '/api/keyframes': typeof ApiKeyframesRoute
   '/api/storyboard': typeof ApiStoryboardRoute
+  '/api/storyboard-scene': typeof ApiStoryboardSceneRoute
   '/api/transform-image': typeof ApiTransformImageRoute
   '/api/video-prompt': typeof ApiVideoPromptRoute
 }
@@ -123,6 +131,7 @@ export interface FileRoutesById {
   '/api/generate-video': typeof ApiGenerateVideoRoute
   '/api/keyframes': typeof ApiKeyframesRoute
   '/api/storyboard': typeof ApiStoryboardRoute
+  '/api/storyboard-scene': typeof ApiStoryboardSceneRoute
   '/api/transform-image': typeof ApiTransformImageRoute
   '/api/video-prompt': typeof ApiVideoPromptRoute
 }
@@ -139,6 +148,7 @@ export interface FileRouteTypes {
     | '/api/generate-video'
     | '/api/keyframes'
     | '/api/storyboard'
+    | '/api/storyboard-scene'
     | '/api/transform-image'
     | '/api/video-prompt'
   fileRoutesByTo: FileRoutesByTo
@@ -153,6 +163,7 @@ export interface FileRouteTypes {
     | '/api/generate-video'
     | '/api/keyframes'
     | '/api/storyboard'
+    | '/api/storyboard-scene'
     | '/api/transform-image'
     | '/api/video-prompt'
   id:
@@ -167,6 +178,7 @@ export interface FileRouteTypes {
     | '/api/generate-video'
     | '/api/keyframes'
     | '/api/storyboard'
+    | '/api/storyboard-scene'
     | '/api/transform-image'
     | '/api/video-prompt'
   fileRoutesById: FileRoutesById
@@ -182,6 +194,7 @@ export interface RootRouteChildren {
   ApiGenerateVideoRoute: typeof ApiGenerateVideoRoute
   ApiKeyframesRoute: typeof ApiKeyframesRoute
   ApiStoryboardRoute: typeof ApiStoryboardRoute
+  ApiStoryboardSceneRoute: typeof ApiStoryboardSceneRoute
   ApiTransformImageRoute: typeof ApiTransformImageRoute
   ApiVideoPromptRoute: typeof ApiVideoPromptRoute
 }
@@ -244,6 +257,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTransformImageRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/storyboard-scene': {
+      id: '/api/storyboard-scene'
+      path: '/api/storyboard-scene'
+      fullPath: '/api/storyboard-scene'
+      preLoaderRoute: typeof ApiStoryboardSceneRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/storyboard': {
       id: '/api/storyboard'
       path: '/api/storyboard'
@@ -286,6 +306,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiGenerateVideoRoute: ApiGenerateVideoRoute,
   ApiKeyframesRoute: ApiKeyframesRoute,
   ApiStoryboardRoute: ApiStoryboardRoute,
+  ApiStoryboardSceneRoute: ApiStoryboardSceneRoute,
   ApiTransformImageRoute: ApiTransformImageRoute,
   ApiVideoPromptRoute: ApiVideoPromptRoute,
 }
