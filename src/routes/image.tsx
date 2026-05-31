@@ -156,6 +156,20 @@ function ImagePage() {
 
         {mode === "text" ? (
           <div className="mt-5 space-y-4">
+            <div>
+              <label className="text-sm font-semibold">Model</label>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {MODELS.map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => setModel(m.id)}
+                    className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${model === m.id ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground"}`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <Selector label="Style" options={STYLES} value={style} onChange={setStyle} />
             <Selector label="Aspect ratio" options={["1:1", "16:9", "9:16"] as const} value={ratio} onChange={setRatio} />
             <Selector label="Lighting" options={LIGHTING} value={lighting} onChange={setLighting} />
