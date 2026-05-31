@@ -65,8 +65,9 @@ async function renderFreeVideo(options: {
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Could not start the video renderer.");
+  const rawCtx = canvas.getContext("2d");
+  if (!rawCtx) throw new Error("Could not start the video renderer.");
+  const ctx: CanvasRenderingContext2D = rawCtx;
 
   const fps = 30;
   const totalFrames = options.duration * fps;
