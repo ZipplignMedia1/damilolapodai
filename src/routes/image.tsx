@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowUp, Loader2, Download, Sparkles, Plus, X, ImageIcon, KeyRound, CheckCircle2, AlertCircle } from "lucide-react";
+import { ArrowUp, Loader2, Download, Sparkles, Plus, X, ImageIcon, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { addImage } from "@/lib/library";
@@ -9,7 +9,7 @@ export const Route = createFileRoute("/image")({
   head: () => ({
     meta: [
       { title: "Generate Image — DAMILOLAPOD AI" },
-      { name: "description", content: "Create photorealistic and cinematic AI images from text." },
+      { name: "description", content: "Create photorealistic and cinematic AI images from text — free, unlimited." },
     ],
   }),
   component: ImagePage,
@@ -17,8 +17,11 @@ export const Route = createFileRoute("/image")({
 
 type Ratio = "1:1" | "16:9" | "9:16";
 const MODELS = [
-  { id: "nano-banana", label: "Nano Banana" },
-  { id: "nano-banana-pro", label: "Nano Banana Pro" },
+  { id: "flux", label: "Flux" },
+  { id: "flux-realism", label: "Flux Realism" },
+  { id: "flux-anime", label: "Flux Anime" },
+  { id: "flux-3d", label: "Flux 3D" },
+  { id: "turbo", label: "Turbo (fast)" },
 ] as const;
 type ModelId = (typeof MODELS)[number]["id"];
 const RATIOS: Ratio[] = ["1:1", "16:9", "9:16"];
@@ -41,7 +44,7 @@ type Gen =
 
 function ImagePage() {
   const [prompt, setPrompt] = useState("");
-  const [model, setModel] = useState<ModelId>("nano-banana");
+  const [model, setModel] = useState<ModelId>("flux");
   const [ratio, setRatio] = useState<Ratio>("1:1");
   const [type, setType] = useState<ImageType>("photo");
   const [showType, setShowType] = useState(false);
