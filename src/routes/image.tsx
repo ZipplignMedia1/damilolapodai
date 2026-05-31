@@ -159,10 +159,6 @@ function ImagePage() {
       setSubmitting(false);
       if (progressTimer.current) clearInterval(progressTimer.current);
     }
-    } finally {
-      setSubmitting(false);
-      if (progressTimer.current) clearInterval(progressTimer.current);
-    }
   }
 
   const ratioClass = (r: Ratio) =>
