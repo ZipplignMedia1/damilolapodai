@@ -203,8 +203,8 @@ function ImagePage() {
                 ))}
               </select>
               <div className="flex items-center gap-1.5">
-                <Pill onClick={() => setShowStyle((s) => !s)} active={showStyle}>
-                  <Sparkles className="h-3 w-3" /> {style}
+                <Pill onClick={() => setShowType((s) => !s)} active={showType}>
+                  <Sparkles className="h-3 w-3" /> {TYPES.find((t) => t.id === type)?.label ?? type}
                 </Pill>
                 <Pill
                   onClick={() => {
