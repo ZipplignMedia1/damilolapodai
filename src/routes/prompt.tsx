@@ -4,6 +4,22 @@ import { Sparkles, Loader2, Copy, Check, Code2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const TARGETS = [
+  { id: "universal", label: "Universal (any model)" },
+  { id: "veo3", label: "Google Veo 3" },
+  { id: "veo2", label: "Google Veo 2" },
+  { id: "seedance", label: "ByteDance Seedance" },
+  { id: "kling", label: "Kling AI" },
+  { id: "runway", label: "Runway Gen-3/4" },
+  { id: "pika", label: "Pika 2" },
+  { id: "luma", label: "Luma Dream Machine" },
+  { id: "hailuo", label: "MiniMax Hailuo 02" },
+  { id: "sora", label: "OpenAI Sora" },
+  { id: "wan", label: "Alibaba Wan 2" },
+] as const;
+type TargetId = typeof TARGETS[number]["id"];
 
 export const Route = createFileRoute("/prompt")({
   head: () => ({
@@ -18,6 +34,7 @@ export const Route = createFileRoute("/prompt")({
 function PromptPage() {
   const [idea, setIdea] = useState("");
   const [duration, setDuration] = useState(10);
+  const [target, setTarget] = useState<TargetId>("universal");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
