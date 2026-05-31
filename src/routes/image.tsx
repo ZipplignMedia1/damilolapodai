@@ -174,7 +174,9 @@ function ImagePage() {
 
   return (
     <div className="flex flex-col gap-4 pb-[260px]">
+      <KeySetupBanner status={keyStatus} error={keyError} onRetry={verifyKey} />
       <div ref={feedRef} className="flex flex-col gap-3">
+
         {gens.length === 0 ? (
           <EmptyState />
         ) : (
