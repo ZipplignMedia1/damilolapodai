@@ -47,7 +47,7 @@ function ImagePage() {
   const [showType, setShowType] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [gens, setGens] = useState<Gen[]>([]);
-  const [attachment, setAttachment] = useState<{ name: string; dataUrl: string } | null>(null);
+  const [attachments, setAttachments] = useState<{ id: string; name: string; dataUrl: string }[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
   const feedRef = useRef<HTMLDivElement>(null);
   const progressTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -59,11 +59,16 @@ function ImagePage() {
   useEffect(() => () => { if (progressTimer.current) clearInterval(progressTimer.current); }, []);
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setAttachment({ name: file.name, dataUrl: String(reader.result) });
-    reader.readAsDataURL(file);
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    const remaining = Math.max(0, 8 - attachments.length);
+    if (files.length > remaining) toast.message(`Max 8 images. ${files.length - remaining} skipped.`);
+    files.slice(0, remaining).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () =>
+        setAttachments((prev) => [...prev, { id: crypto.randomUUID(), name: file.name, dataUrl: String(reader.result) }]);
+      reader.readAsDataURL(file);
+    });
     e.target.value = "";
   }
 
