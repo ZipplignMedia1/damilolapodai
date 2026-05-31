@@ -216,16 +216,27 @@ function CreatePage() {
     if (!prompt.trim()) return toast.error("Please describe the video");
     if (mode === "image" && !imageDataUrl) return toast.error("Please upload an image");
     setSubmitting(true);
-    const toastId = toast.loading(mode === "text" ? "Generating AI keyframes…" : "Rendering…");
+    const toastId = toast.loading("Generating video… (~20-40s)");
     try {
-      const videoBlob = await renderVideo({
-        prompt: prompt.trim(),
-        ratio,
-        duration,
-        imageDataUrl,
-        mode,
-        onStatus: (s) => toast.loading(s, { id: toastId }),
+      const res = await fetch("/api/generate-video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: prompt.trim(),
+          aspectRatio: ratio,
+          duration,
+          imageDataUrl: mode === "image" ? imageDataUrl : null,
+        }),
       });
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(text || `Generation failed (${res.status})`);
+      }
+      const { url } = (await res.json()) as { url: string };
+
+      toast.loading("Downloading video…", { id: toastId });
+      const videoRes = await fetch(url);
+      const videoBlob = await videoRes.blob();
       const videoUrl = URL.createObjectURL(videoBlob);
       const id = crypto.randomUUID();
 
@@ -249,6 +260,7 @@ function CreatePage() {
       setSubmitting(false);
     }
   }
+
 
 
   return (
