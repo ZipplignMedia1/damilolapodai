@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowUp, Loader2, Download, Sparkles, Plus, X, ImageIcon } from "lucide-react";
+import { ArrowUp, Loader2, Download, Sparkles, Plus, X, ImageIcon, KeyRound, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { addImage } from "@/lib/library";
@@ -51,12 +51,35 @@ function ImagePage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const feedRef = useRef<HTMLDivElement>(null);
   const progressTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [keyStatus, setKeyStatus] = useState<"checking" | "ok" | "missing">("checking");
+  const [keyError, setKeyError] = useState<string | null>(null);
+
+  async function verifyKey() {
+    setKeyStatus("checking");
+    setKeyError(null);
+    try {
+      const res = await fetch("/api/verify-gemini");
+      const json = (await res.json()) as { ok: boolean; error?: string };
+      if (json.ok) {
+        setKeyStatus("ok");
+      } else {
+        setKeyStatus("missing");
+        setKeyError(json.error ?? "Key not valid");
+      }
+    } catch (err) {
+      setKeyStatus("missing");
+      setKeyError(err instanceof Error ? err.message : "Verification failed");
+    }
+  }
+
+  useEffect(() => { verifyKey(); }, []);
 
   useEffect(() => {
     feedRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   }, [gens.length]);
 
   useEffect(() => () => { if (progressTimer.current) clearInterval(progressTimer.current); }, []);
+
 
   async function downscale(file: File, max = 1024, quality = 0.82): Promise<string> {
     const dataUrl = await new Promise<string>((res, rej) => {
@@ -102,6 +125,8 @@ function ImagePage() {
 
   async function handleGenerate() {
     if (!prompt.trim()) return toast.error("Please enter a prompt");
+    if (keyStatus !== "ok") return toast.error("Gemini API key not set up. Verify it first.");
+
     const currentPrompt = prompt.trim();
     const currentRatio = ratio;
     setSubmitting(true);
@@ -149,7 +174,9 @@ function ImagePage() {
 
   return (
     <div className="flex flex-col gap-4 pb-[260px]">
+      <KeySetupBanner status={keyStatus} error={keyError} onRetry={verifyKey} />
       <div ref={feedRef} className="flex flex-col gap-3">
+
         {gens.length === 0 ? (
           <EmptyState />
         ) : (
@@ -337,3 +364,63 @@ function EmptyState() {
     </div>
   );
 }
+
+function KeySetupBanner({
+  status,
+  error,
+  onRetry,
+}: {
+  status: "checking" | "ok" | "missing";
+  error: string | null;
+  onRetry: () => void;
+}) {
+  if (status === "ok") {
+    return (
+      <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">
+        <CheckCircle2 className="h-4 w-4 shrink-0" />
+        <span className="font-medium">Gemini API key connected — ready to generate.</span>
+      </div>
+    );
+  }
+  if (status === "checking") {
+    return (
+      <div className="flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted-foreground">
+        <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+        <span>Verifying your Gemini API key…</span>
+      </div>
+    );
+  }
+  return (
+    <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+      <div className="flex items-start gap-2">
+        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+        <div className="flex-1">
+          <p className="font-semibold text-amber-100">Set up your free Gemini API key</p>
+          <p className="mt-1 text-amber-200/80">
+            {error ?? "GEMINI_API_KEY is missing."} Get a free key from Google AI Studio (no billing required).
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <a
+              href="https://aistudio.google.com/apikey"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-md border border-amber-400/40 bg-amber-400/20 px-2.5 py-1 font-medium text-amber-50 hover:bg-amber-400/30"
+            >
+              <KeyRound className="h-3.5 w-3.5" /> Get a free key
+            </a>
+            <button
+              onClick={onRetry}
+              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2.5 py-1 font-medium text-foreground hover:bg-muted"
+            >
+              <Loader2 className="h-3.5 w-3.5" /> Re-check
+            </button>
+          </div>
+          <p className="mt-2 text-[10px] text-amber-200/60">
+            After adding the key in your project secrets as <code className="rounded bg-black/30 px-1">GEMINI_API_KEY</code>, click Re-check.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
