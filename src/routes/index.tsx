@@ -53,21 +53,65 @@ function loadImage(src: string) {
   });
 }
 
-async function renderFreeVideo(options: {
+async function fetchKeyframes(prompt: string, count: number): Promise<HTMLImageElement[]> {
+  const res = await fetch("/api/keyframes", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt, count }),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`AI keyframes failed: ${text.slice(0, 160) || res.status}`);
+  }
+  const { images } = (await res.json()) as { images: string[] };
+  return Promise.all(images.map((b64) => loadImage(`data:image/png;base64,${b64}`)));
+}
+
+function drawCover(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement,
+  width: number,
+  height: number,
+  zoom: number,
+  panX: number,
+  panY: number,
+) {
+  const scale = Math.max(width / img.width, height / img.height) * zoom;
+  const iw = img.width * scale;
+  const ih = img.height * scale;
+  const ix = (width - iw) / 2 + panX;
+  const iy = (height - ih) / 2 + panY;
+  ctx.drawImage(img, ix, iy, iw, ih);
+}
+
+async function renderVideo(options: {
   prompt: string;
   ratio: Ratio;
   duration: Duration;
   imageDataUrl: string | null;
   mode: Mode;
+  onStatus?: (s: string) => void;
 }) {
-  if (!window.MediaRecorder) throw new Error("Your browser does not support free local video rendering.");
+  if (!window.MediaRecorder) throw new Error("Your browser does not support video rendering.");
   const { width, height } = ratioSizes[options.ratio];
+
+  // Get source images: either user-uploaded (image mode) or AI keyframes (text mode)
+  let frames: HTMLImageElement[];
+  if (options.mode === "image" && options.imageDataUrl) {
+    frames = [await loadImage(options.imageDataUrl)];
+  } else {
+    options.onStatus?.("Generating AI keyframes…");
+    frames = await fetchKeyframes(options.prompt, options.duration === 10 ? 6 : 4);
+  }
+
+  options.onStatus?.("Rendering video…");
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
-  const rawCtx = canvas.getContext("2d");
-  if (!rawCtx) throw new Error("Could not start the video renderer.");
-  const ctx: CanvasRenderingContext2D = rawCtx;
+  const ctxOrNull = canvas.getContext("2d");
+  if (!ctxOrNull) throw new Error("Could not start the video renderer.");
+  const ctx: CanvasRenderingContext2D = ctxOrNull;
+
 
   const fps = 30;
   const totalFrames = options.duration * fps;
@@ -75,88 +119,72 @@ async function renderFreeVideo(options: {
   const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
     ? "video/webm;codecs=vp9"
     : "video/webm";
-  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 5_000_000 });
+  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 6_000_000 });
   const chunks: BlobPart[] = [];
-  const image = options.imageDataUrl ? await loadImage(options.imageDataUrl) : null;
 
   const finished = new Promise<Blob>((resolve, reject) => {
-    recorder.ondataavailable = (event) => {
-      if (event.data.size) chunks.push(event.data);
-    };
+    recorder.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
     recorder.onstop = () => resolve(new Blob(chunks, { type: "video/webm" }));
-    recorder.onerror = () => reject(new Error("Local render failed."));
+    recorder.onerror = () => reject(new Error("Render failed."));
   });
 
   function draw(frame: number) {
     const progress = frame / Math.max(totalFrames - 1, 1);
-    const pulse = Math.sin(progress * Math.PI * 2);
-    const drift = Math.sin(progress * Math.PI);
-    const gradient = ctx.createLinearGradient(0, 0, width, height);
-    gradient.addColorStop(0, "#151736");
-    gradient.addColorStop(0.55, "#4f46e5");
-    gradient.addColorStop(1, "#111827");
-    ctx.fillStyle = gradient;
+    ctx.fillStyle = "#000";
     ctx.fillRect(0, 0, width, height);
 
-    ctx.globalAlpha = 0.22;
-    ctx.fillStyle = "#ffffff";
-    for (let i = 0; i < 9; i++) {
-      const x = ((i * width) / 7 + progress * width * 0.22) % (width + 220) - 110;
-      const y = height * (0.14 + ((i * 0.17) % 0.76));
-      const r = Math.min(width, height) * (0.035 + (i % 3) * 0.018);
-      ctx.beginPath();
-      ctx.arc(x, y + pulse * 16, r, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    // Determine current segment between two keyframes
+    const segs = Math.max(frames.length, 1);
+    const segPos = progress * segs;
+    const segIndex = Math.min(Math.floor(segPos), segs - 1);
+    const segLocal = segPos - segIndex; // 0..1 within this segment
+
+    const current = frames[segIndex];
+    const next = frames[Math.min(segIndex + 1, frames.length - 1)];
+
+    // Ken Burns on current frame (zoom in over the segment)
+    const zoomA = 1.05 + segLocal * 0.12;
+    const panAx = (segIndex % 2 === 0 ? 1 : -1) * width * 0.04 * segLocal;
+    const panAy = -height * 0.03 * segLocal;
     ctx.globalAlpha = 1;
+    drawCover(ctx, current, width, height, zoomA, panAx, panAy);
 
-    if (image) {
-      const scale = Math.max(width / image.width, height / image.height) * (1.04 + progress * 0.08);
-      const iw = image.width * scale;
-      const ih = image.height * scale;
-      const ix = (width - iw) / 2 + pulse * width * 0.025;
-      const iy = (height - ih) / 2 - drift * height * 0.025;
-      ctx.globalAlpha = 0.88;
-      ctx.drawImage(image, ix, iy, iw, ih);
-      ctx.globalAlpha = 1;
-      const shade = ctx.createLinearGradient(0, height * 0.34, 0, height);
-      shade.addColorStop(0, "rgba(0,0,0,0)");
-      shade.addColorStop(1, "rgba(0,0,0,0.74)");
-      ctx.fillStyle = shade;
-      ctx.fillRect(0, 0, width, height);
+    // Crossfade in the next frame during the last 25% of the segment
+    if (next !== current) {
+      const fadeStart = 0.75;
+      if (segLocal > fadeStart) {
+        const fade = (segLocal - fadeStart) / (1 - fadeStart);
+        const zoomB = 1.0 + fade * 0.05;
+        ctx.globalAlpha = fade;
+        drawCover(ctx, next, width, height, zoomB, 0, 0);
+        ctx.globalAlpha = 1;
+      }
     }
 
-    const pad = Math.max(42, width * 0.07);
-    ctx.fillStyle = "rgba(255,255,255,0.18)";
-    ctx.fillRect(pad, pad, width * 0.18, 5);
-    ctx.fillStyle = "rgba(255,255,255,0.72)";
-    ctx.fillRect(pad, pad, width * 0.18 * progress, 5);
-    ctx.fillStyle = "rgba(255,255,255,0.82)";
-    ctx.font = `${Math.max(18, width * 0.018)}px Arial, sans-serif`;
-    ctx.fillText(options.mode === "image" ? "IMAGE MOTION" : "TEXT VIDEO", pad, pad + 42);
+    // Subtle vignette
+    const grad = ctx.createRadialGradient(width / 2, height / 2, Math.min(width, height) * 0.45, width / 2, height / 2, Math.max(width, height) * 0.7);
+    grad.addColorStop(0, "rgba(0,0,0,0)");
+    grad.addColorStop(1, "rgba(0,0,0,0.45)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, width, height);
 
-    const fontSize = Math.max(34, Math.min(width * 0.072, height * 0.082));
-    ctx.font = `700 ${fontSize}px Arial, sans-serif`;
-    ctx.textBaseline = "alphabetic";
-    const lines = wrapText(ctx, options.prompt, width - pad * 2, 4);
-    const textY = image ? height - pad - (lines.length - 1) * fontSize * 1.12 : height * 0.48;
-    ctx.shadowColor = "rgba(0,0,0,0.38)";
-    ctx.shadowBlur = 24;
-    ctx.fillStyle = "#ffffff";
-    lines.forEach((line, index) => {
-      ctx.fillText(line, pad, textY + index * fontSize * 1.12);
-    });
-    ctx.shadowBlur = 0;
+    // Progress bar
+    const pad = Math.max(28, width * 0.04);
+    ctx.fillStyle = "rgba(255,255,255,0.2)";
+    ctx.fillRect(pad, height - pad - 4, width - pad * 2, 4);
+    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    ctx.fillRect(pad, height - pad - 4, (width - pad * 2) * progress, 4);
   }
 
   recorder.start();
   for (let frame = 0; frame < totalFrames; frame++) {
     draw(frame);
-    await new Promise((resolve) => window.setTimeout(resolve, 1000 / fps));
+    await new Promise((r) => window.setTimeout(r, 1000 / fps));
   }
   recorder.stop();
   return finished;
 }
+
 
 
 function CreatePage() {
@@ -188,9 +216,16 @@ function CreatePage() {
     if (!prompt.trim()) return toast.error("Please describe the video");
     if (mode === "image" && !imageDataUrl) return toast.error("Please upload an image");
     setSubmitting(true);
-    const toastId = toast.loading("Rendering locally…");
+    const toastId = toast.loading(mode === "text" ? "Generating AI keyframes…" : "Rendering…");
     try {
-      const videoBlob = await renderFreeVideo({ prompt: prompt.trim(), ratio, duration, imageDataUrl, mode });
+      const videoBlob = await renderVideo({
+        prompt: prompt.trim(),
+        ratio,
+        duration,
+        imageDataUrl,
+        mode,
+        onStatus: (s) => toast.loading(s, { id: toastId }),
+      });
       const videoUrl = URL.createObjectURL(videoBlob);
       const id = crypto.randomUUID();
 
@@ -214,6 +249,7 @@ function CreatePage() {
       setSubmitting(false);
     }
   }
+
 
   return (
     <div className="space-y-4">
