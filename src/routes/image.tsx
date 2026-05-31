@@ -131,13 +131,23 @@ function ImagePage() {
     }, 900);
 
     try {
-      const res = await fetch("/api/generate-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: currentPrompt, model, type, aspectRatio: currentRatio, referenceImages }),
+      const dims = currentRatio === "1:1" ? { w: 1024, h: 1024 } : currentRatio === "16:9" ? { w: 1280, h: 720 } : { w: 720, h: 1280 };
+      const directive = "Ultra detailed, high quality, photorealistic, no watermark.";
+      const fullPrompt = `${directive} ${currentPrompt}`;
+      const seed = Math.floor(Math.random() * 1_000_000);
+      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(fullPrompt)}?width=${dims.w}&height=${dims.h}&model=${encodeURIComponent(model)}&seed=${seed}&nologo=true&enhance=true`;
+
+      // Fetch directly from Pollinations — no Cloudflare Worker timeout.
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Pollinations ${res.status}`);
+      const blob = await res.blob();
+      const image: string = await new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(String(r.result));
+        r.onerror = () => reject(r.error);
+        r.readAsDataURL(blob);
       });
-      if (!res.ok) throw new Error((await res.text()) || `Failed (${res.status})`);
-      const { image } = (await res.json()) as { image: string };
+      void referenceImages; // refs not supported by Pollinations text-to-image
       setGens((prev) =>
         prev.map((g) => (g.id === id ? { id, prompt: currentPrompt, status: "done", image, ratio: currentRatio } : g))
       );
