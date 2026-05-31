@@ -38,7 +38,7 @@ function dataUrlToBlob(dataUrl: string): { bytes: Uint8Array; mime: string } {
 
 async function uploadToMedia(bytes: Uint8Array, mime: string, filename: string, key: string): Promise<string> {
   const form = new FormData();
-  form.append("file", new Blob([bytes], { type: mime }), filename);
+  form.append("file", new Blob([bytes as BlobPart], { type: mime }), filename);
   const res = await fetch(`${MEDIA_BASE}/upload`, {
     method: "POST",
     headers: { Authorization: `Bearer ${key}` },
