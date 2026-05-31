@@ -67,7 +67,7 @@ function CreatePage() {
       toast.loading("Rendering video… this can take a few minutes.", { id: toastId });
 
       let videoUrl: string | undefined;
-      let currentId = result.requestId;
+      const currentId = result.requestId;
       const startedAt = Date.now();
       while (Date.now() - startedAt < 15 * 60 * 1000) {
         await new Promise((resolve) => window.setTimeout(resolve, 7000));
@@ -77,7 +77,6 @@ function CreatePage() {
           videoUrl = status.videoUrl;
           break;
         }
-        if (status.requestId) currentId = status.requestId;
       }
 
       if (!videoUrl) throw new Error("Video is still processing. Please try again in a few minutes.");
