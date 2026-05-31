@@ -18,6 +18,7 @@ type Body = {
   model?: ModelId;
   type?: ImageType;
   aspectRatio?: "1:1" | "16:9" | "9:16";
+  referenceImages?: string[]; // data URLs of character/avatar refs
 };
 
 const MODEL_MAP: Record<ModelId, string> = {
