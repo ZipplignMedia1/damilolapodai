@@ -20,9 +20,6 @@ type Ratio = "16:9" | "9:16" | "1:1";
 type Duration = 5 | 10;
 type Mode = "text" | "image";
 
-type Ratio = "16:9" | "9:16" | "1:1";
-type Duration = 5 | 10;
-type Mode = "text" | "image";
 
 
 
