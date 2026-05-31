@@ -21,6 +21,11 @@ type Mode = "text" | "transform";
 type Ratio = "1:1" | "16:9" | "9:16";
 
 const STYLES = ["photorealistic", "cinematic", "3D render", "anime"] as const;
+const MODELS = [
+  { id: "nano-banana", label: "Nano Banana" },
+  { id: "nano-banana-pro", label: "Nano Banana Pro" },
+] as const;
+type ModelId = (typeof MODELS)[number]["id"];
 const LIGHTING = ["studio", "natural", "dramatic"] as const;
 
 function ImagePage() {
