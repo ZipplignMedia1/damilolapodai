@@ -60,7 +60,7 @@ function ImagePage() {
       const endpoint = mode === "text" ? "/api/generate-image" : "/api/transform-image";
       const payload =
         mode === "text"
-          ? { prompt, style, aspectRatio: ratio, lighting }
+          ? { prompt, model, style, aspectRatio: ratio, lighting }
           : { prompt, imageDataUrl, strength, styleTransfer };
       const res = await fetch(endpoint, {
         method: "POST",
