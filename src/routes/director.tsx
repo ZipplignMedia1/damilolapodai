@@ -273,7 +273,7 @@ function StoryTab() {
       </SectionCard>
 
       <Button onClick={run} disabled={loading} className="w-full h-12 rounded-xl text-base font-bold">
-        {loading ? <><Loader2 className="h-5 w-5 animate-spin" /> Writing…</> : <><BookOpen className="h-5 w-5" /> Generate Story</>}
+        {loading ? <><Loader2 className="h-5 w-5 animate-spin" /> Writing…</> : <><BookOpen className="h-5 w-5" /> Generate Story · {cost} DPOD</>}
       </Button>
 
       {result && (
