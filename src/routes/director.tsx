@@ -218,14 +218,22 @@ function StoryTab() {
   const [length, setLength] = useState<"short" | "medium" | "long">("short");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const director = useDirector();
+
+  const cost = length === "short" ? 2 : length === "medium" ? 4 : 6;
 
   async function run() {
     if (!idea.trim()) return toast.error("Give me a small idea to grow");
     setLoading(true); setResult(null);
+    const toastId = toast.loading(`Spending ${cost} DPOD · writing story…`);
     try {
-      const json = await callDirector({ mode: "story", idea, genre, tone, length });
+      const json = await director(cost, `director:story:${length}`, { mode: "story", idea, genre, tone, length });
       setResult(typeof json.result === "string" ? json.result : JSON.stringify(json.result));
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+      toast.success(`Done! ${json.creditsRemaining} DPOD left.`, { id: toastId });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed";
+      toast.error(msg.includes("INSUFFICIENT_CREDITS") ? "Not enough DPOD" : msg, { id: toastId });
+    }
     finally { setLoading(false); }
   }
 
