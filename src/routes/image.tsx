@@ -217,7 +217,7 @@ function ImagePage() {
             You don't have enough DPOD to generate this image.
           </p>
           <Link
-            to="/wallet"
+            to="/topup"
             className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground"
           >
             <Wand2 className="h-3.5 w-3.5" /> Top up DPOD
