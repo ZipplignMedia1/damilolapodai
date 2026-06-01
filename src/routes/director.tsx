@@ -1,11 +1,15 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { Sparkles, Loader2, Copy, Check, Wand2, BookOpen, Mic, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import { spendCredits, refundCredits } from "@/lib/credits.functions";
 
 type Tab = "prompt" | "story" | "voice" | "analyze";
 
@@ -26,6 +30,12 @@ export const Route = createFileRoute("/director")({
       { name: "description", content: "Prompts, stories, voice direction, and prompt analysis." },
     ],
   }),
+  beforeLoad: async ({ location }) => {
+    const { data } = await supabase.auth.getUser();
+    if (!data.user) {
+      throw redirect({ to: "/login", search: { redirect: location.href } as never });
+    }
+  },
   component: DirectorPage,
 });
 
@@ -64,14 +74,35 @@ function DirectorPage() {
   );
 }
 
-async function callDirector(body: Record<string, unknown>) {
-  const res = await fetch("/api/director-ai", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error((await res.text()) || `Failed (${res.status})`);
-  return (await res.json()) as { result: unknown };
+function useDirector() {
+  const qc = useQueryClient();
+  const runSpend = useServerFn(spendCredits);
+  const runRefund = useServerFn(refundCredits);
+
+  return async function run(
+    cost: number,
+    reason: string,
+    body: Record<string, unknown>,
+  ): Promise<{ result: unknown; creditsRemaining: number }> {
+    const spend = await runSpend({ data: { amount: cost, reason } });
+    try {
+      const res = await fetch("/api/director-ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error((await res.text()) || `Failed (${res.status})`);
+      const json = (await res.json()) as { result: unknown };
+      qc.invalidateQueries({ queryKey: ["my-profile"] });
+      return { result: json.result, creditsRemaining: spend.creditsRemaining };
+    } catch (err) {
+      try {
+        await runRefund({ data: { amount: cost, reason: `refund:${reason}` } });
+        qc.invalidateQueries({ queryKey: ["my-profile"] });
+      } catch {}
+      throw err;
+    }
+  };
 }
 
 function CopyBtn({ text }: { text: string }) {
@@ -112,18 +143,26 @@ function PromptTab() {
   const [duration, setDuration] = useState(10);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const director = useDirector();
+
+  const isImage = format === "image";
+  const cost = isImage ? 1 : duration; // image prompt = 1 DPOD, video prompt = duration DPOD
 
   async function run() {
     if (!desc.trim()) return toast.error("Describe your shot first");
     setLoading(true); setResult(null);
+    const toastId = toast.loading(`Spending ${cost} DPOD · directing…`);
     try {
-      const json = await callDirector({ mode: "expand", description: desc, format, tone, duration });
+      const json = await director(cost, `director:prompt:${format}`, { mode: "expand", description: desc, format, tone, duration });
       setResult(typeof json.result === "string" ? json.result : JSON.stringify(json.result));
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+      toast.success(`Done! ${json.creditsRemaining} DPOD left.`, { id: toastId });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed";
+      toast.error(msg.includes("INSUFFICIENT_CREDITS") ? "Not enough DPOD" : msg, { id: toastId });
+    }
     finally { setLoading(false); }
   }
 
-  const isImage = format === "image";
   return (
     <>
       <SectionCard title="Prompt Director" subtitle="Rough idea in → cinema-grade prompt out.">
@@ -155,7 +194,7 @@ function PromptTab() {
       </SectionCard>
 
       <Button onClick={run} disabled={loading} className="w-full h-12 rounded-xl text-base font-bold">
-        {loading ? <><Loader2 className="h-5 w-5 animate-spin" /> Directing…</> : <><Sparkles className="h-5 w-5" /> Generate Prompt</>}
+        {loading ? <><Loader2 className="h-5 w-5 animate-spin" /> Directing…</> : <><Sparkles className="h-5 w-5" /> Generate Prompt · {cost} DPOD</>}
       </Button>
 
       {result && (
@@ -179,14 +218,22 @@ function StoryTab() {
   const [length, setLength] = useState<"short" | "medium" | "long">("short");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const director = useDirector();
+
+  const cost = length === "short" ? 2 : length === "medium" ? 4 : 6;
 
   async function run() {
     if (!idea.trim()) return toast.error("Give me a small idea to grow");
     setLoading(true); setResult(null);
+    const toastId = toast.loading(`Spending ${cost} DPOD · writing story…`);
     try {
-      const json = await callDirector({ mode: "story", idea, genre, tone, length });
+      const json = await director(cost, `director:story:${length}`, { mode: "story", idea, genre, tone, length });
       setResult(typeof json.result === "string" ? json.result : JSON.stringify(json.result));
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+      toast.success(`Done! ${json.creditsRemaining} DPOD left.`, { id: toastId });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed";
+      toast.error(msg.includes("INSUFFICIENT_CREDITS") ? "Not enough DPOD" : msg, { id: toastId });
+    }
     finally { setLoading(false); }
   }
 
@@ -226,7 +273,7 @@ function StoryTab() {
       </SectionCard>
 
       <Button onClick={run} disabled={loading} className="w-full h-12 rounded-xl text-base font-bold">
-        {loading ? <><Loader2 className="h-5 w-5 animate-spin" /> Writing…</> : <><BookOpen className="h-5 w-5" /> Generate Story</>}
+        {loading ? <><Loader2 className="h-5 w-5 animate-spin" /> Writing…</> : <><BookOpen className="h-5 w-5" /> Generate Story · {cost} DPOD</>}
       </Button>
 
       {result && (
@@ -264,14 +311,21 @@ function VoiceTab() {
   const [language, setLanguage] = useState("Nigerian English");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<VoiceResult | null>(null);
+  const director = useDirector();
+  const cost = 1;
 
   async function run() {
     if (!character.trim()) return toast.error("Describe the character or voice you want");
     setLoading(true); setResult(null);
+    const toastId = toast.loading(`Spending ${cost} DPOD · tuning voice…`);
     try {
-      const json = await callDirector({ mode: "voice", character, gender, language });
+      const json = await director(cost, "director:voice", { mode: "voice", character, gender, language });
       setResult(json.result as VoiceResult);
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+      toast.success(`Done! ${json.creditsRemaining} DPOD left.`, { id: toastId });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed";
+      toast.error(msg.includes("INSUFFICIENT_CREDITS") ? "Not enough DPOD" : msg, { id: toastId });
+    }
     finally { setLoading(false); }
   }
 
@@ -321,7 +375,7 @@ function VoiceTab() {
       </SectionCard>
 
       <Button onClick={run} disabled={loading} className="w-full h-12 rounded-xl text-base font-bold">
-        {loading ? <><Loader2 className="h-5 w-5 animate-spin" /> Tuning…</> : <><Mic className="h-5 w-5" /> Generate Voice Prompt</>}
+        {loading ? <><Loader2 className="h-5 w-5 animate-spin" /> Tuning…</> : <><Mic className="h-5 w-5" /> Generate Voice · {cost} DPOD</>}
       </Button>
 
       {result && !result.raw && (
@@ -396,14 +450,21 @@ function AnalyzeTab() {
   const [target, setTarget] = useState("image");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalyzeResult | null>(null);
+  const director = useDirector();
+  const cost = 1;
 
   async function run() {
     if (!prompt.trim()) return toast.error("Paste a prompt to analyze");
     setLoading(true); setResult(null);
+    const toastId = toast.loading(`Spending ${cost} DPOD · analyzing…`);
     try {
-      const json = await callDirector({ mode: "analyze", prompt, target });
+      const json = await director(cost, "director:analyze", { mode: "analyze", prompt, target });
       setResult(json.result as AnalyzeResult);
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+      toast.success(`Done! ${json.creditsRemaining} DPOD left.`, { id: toastId });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed";
+      toast.error(msg.includes("INSUFFICIENT_CREDITS") ? "Not enough DPOD" : msg, { id: toastId });
+    }
     finally { setLoading(false); }
   }
 
@@ -433,7 +494,7 @@ function AnalyzeTab() {
       </SectionCard>
 
       <Button onClick={run} disabled={loading} className="w-full h-12 rounded-xl text-base font-bold">
-        {loading ? <><Loader2 className="h-5 w-5 animate-spin" /> Analyzing…</> : <><ShieldCheck className="h-5 w-5" /> Analyze Prompt</>}
+        {loading ? <><Loader2 className="h-5 w-5 animate-spin" /> Analyzing…</> : <><ShieldCheck className="h-5 w-5" /> Analyze · {cost} DPOD</>}
       </Button>
 
       {result && !result.raw && (

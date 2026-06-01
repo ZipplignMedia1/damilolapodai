@@ -1,10 +1,14 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Sparkles, Loader2, Copy, Check, Code2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { Sparkles, Loader2, Copy, Check, Code2, Coins } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import { spendCredits, refundCredits } from "@/lib/credits.functions";
 
 const TARGETS = [
   { id: "universal", label: "Universal (any model)" },
@@ -21,6 +25,9 @@ const TARGETS = [
 ] as const;
 type TargetId = typeof TARGETS[number]["id"];
 
+
+
+
 export const Route = createFileRoute("/prompt")({
   head: () => ({
     meta: [
@@ -28,6 +35,12 @@ export const Route = createFileRoute("/prompt")({
       { name: "description", content: "Turn any video idea into a structured shot-by-shot JSON prompt." },
     ],
   }),
+  beforeLoad: async ({ location }) => {
+    const { data } = await supabase.auth.getUser();
+    if (!data.user) {
+      throw redirect({ to: "/login", search: { redirect: location.href } as never });
+    }
+  },
   component: PromptPage,
 });
 
@@ -38,12 +51,26 @@ function PromptPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [outOfCredits, setOutOfCredits] = useState(false);
+  const qc = useQueryClient();
+  const runSpend = useServerFn(spendCredits);
+  const runRefund = useServerFn(refundCredits);
+
+  const cost = duration; // 1 DPOD per second of generated plan
 
   async function generate() {
     if (!idea.trim()) return toast.error("Describe your video idea");
     setLoading(true);
     setResult(null);
+    setOutOfCredits(false);
+    const toastId = toast.loading(`Spending ${cost} DPOD · generating JSON…`);
+
+    // 1. Spend credits first
+    let spent = false;
     try {
+      const spend = await runSpend({ data: { amount: cost, reason: `json_prompt:${duration}s` } });
+      spent = true;
+      // 2. Call generation
       const res = await fetch("/api/video-prompt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -52,8 +79,23 @@ function PromptPage() {
       if (!res.ok) throw new Error((await res.text()) || `Failed (${res.status})`);
       const json = await res.json();
       setResult(JSON.stringify(json, null, 2));
+      qc.invalidateQueries({ queryKey: ["my-profile"] });
+      toast.success(`JSON ready! ${spend.creditsRemaining} DPOD left.`, { id: toastId });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed");
+      const msg = err instanceof Error ? err.message : "Failed";
+      if (msg.includes("INSUFFICIENT_CREDITS")) {
+        setOutOfCredits(true);
+        toast.error("Not enough DPOD", { id: toastId });
+      } else {
+        // Refund the spend if generation failed
+        if (spent) {
+          try {
+            await runRefund({ data: { amount: cost, reason: `refund:json_prompt` } });
+            qc.invalidateQueries({ queryKey: ["my-profile"] });
+          } catch {}
+        }
+        toast.error(msg, { id: toastId });
+      }
     } finally {
       setLoading(false);
     }
@@ -122,8 +164,22 @@ function PromptPage() {
       </div>
 
       <Button onClick={generate} disabled={loading} className="w-full h-12 rounded-xl text-base font-bold">
-        {loading ? (<><Loader2 className="h-5 w-5 animate-spin" /> Generating…</>) : (<><Sparkles className="h-5 w-5" /> Generate JSON Prompt</>)}
+        {loading ? (<><Loader2 className="h-5 w-5 animate-spin" /> Generating…</>) : (<><Sparkles className="h-5 w-5" /> Generate · {cost} DPOD</>)}
       </Button>
+
+      {outOfCredits && (
+        <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-sm">
+          <div className="flex items-center gap-2 font-semibold text-destructive">
+            <Coins className="h-4 w-4" /> Out of DPOD
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            You need {cost} DPOD to generate this JSON prompt.
+          </p>
+          <Link to="/topup" className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground">
+            Top up DPOD
+          </Link>
+        </div>
+      )}
 
       {result && (
         <div className="rounded-2xl border border-border bg-card shadow-sm">
