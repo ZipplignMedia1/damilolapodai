@@ -45,7 +45,7 @@ function LoginPage() {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: window.location.origin },
+          options: { emailRedirectTo: `${window.location.origin}/home` },
         });
         if (error) throw error;
         toast.success("Check your email to confirm your account");
