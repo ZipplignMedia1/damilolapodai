@@ -123,6 +123,69 @@ Be honest. If the prompt is vague, score low. If it's solid, say so.`,
   };
 }
 
+type ChatMessage = { role: "system" | "user"; content: string };
+
+function gatewayError(message: string, status?: number) {
+  const error = new Error(message) as Error & { status?: number };
+  error.status = status;
+  return error;
+}
+
+async function callBluesminds(key: string, model: string, messages: ChatMessage[], json: boolean) {
+  const res = await fetch("https://api.bluesminds.com/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature: 0.5,
+      ...(json ? { response_format: { type: "json_object" } } : {}),
+    }),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw gatewayError(`Bluesminds ${res.status}: ${text.slice(0, 300)}`, res.status);
+  }
+  const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+  return data.choices?.[0]?.message?.content ?? "";
+}
+
+async function callGemini(key: string, messages: ChatMessage[], json: boolean) {
+  const prompt = messages.map((m) => `${m.role.toUpperCase()}:\n${m.content}`).join("\n\n");
+  const model = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.5, ...(json ? { responseMimeType: "application/json" } : {}) },
+    }),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw gatewayError(`Gemini ${res.status}: ${text.slice(0, 300)}`, res.status);
+  }
+  const data = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
+  return data.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
+}
+
+async function generateDirectorContent(messages: ChatMessage[], json: boolean) {
+  const bluesmindsKey = process.env.BLUESMINDS_API_KEY;
+  const geminiKey = process.env.GEMINI_API_KEY;
+  const bluesmindsModel = process.env.BLUESMINDS_MODEL || "gpt-4o-mini";
+
+  if (bluesmindsKey) {
+    try {
+      return await callBluesminds(bluesmindsKey, bluesmindsModel, messages, json);
+    } catch (error) {
+      if (!geminiKey) throw error;
+    }
+  }
+
+  if (!geminiKey) throw gatewayError("Missing BLUESMINDS_API_KEY or GEMINI_API_KEY", 500);
+  return callGemini(geminiKey, messages, json);
+}
+
 export const Route = createFileRoute("/api/director-ai")({
   server: {
     handlers: {
@@ -131,33 +194,11 @@ export const Route = createFileRoute("/api/director-ai")({
         const { system, user, json } = systemFor(body);
         if (!user) return new Response("input required", { status: 400 });
 
-        const key = process.env.BLUESMINDS_API_KEY;
-        if (!key) return new Response("Missing BLUESMINDS_API_KEY", { status: 500 });
-        const model = process.env.BLUESMINDS_MODEL || "gpt-4o-mini";
-
         try {
-          const res = await fetch("https://api.bluesminds.com/v1/chat/completions", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              model,
-              messages: [
-                { role: "system", content: system },
-                { role: "user", content: user },
-              ],
-              temperature: 0.5,
-              ...(json ? { response_format: { type: "json_object" } } : {}),
-            }),
-          });
-
-          if (!res.ok) {
-            const text = await res.text().catch(() => "");
-            if (res.status === 429) return new Response("Rate limit — try again shortly.", { status: 429 });
-            if (res.status === 402) return new Response("AI credits exhausted.", { status: 402 });
-            return new Response(`Gateway ${res.status}: ${text.slice(0, 300)}`, { status: 502 });
-          }
-          const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-          let content = (data.choices?.[0]?.message?.content ?? "")
+          const content = (await generateDirectorContent([
+            { role: "system", content: system },
+            { role: "user", content: user },
+          ], Boolean(json)))
             .replace(/^```[a-z]*\s*/i, "")
             .replace(/```\s*$/i, "")
             .trim();
