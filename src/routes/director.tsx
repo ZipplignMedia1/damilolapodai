@@ -30,6 +30,12 @@ export const Route = createFileRoute("/director")({
       { name: "description", content: "Prompts, stories, voice direction, and prompt analysis." },
     ],
   }),
+  beforeLoad: async ({ location }) => {
+    const { data } = await supabase.auth.getUser();
+    if (!data.user) {
+      throw redirect({ to: "/login", search: { redirect: location.href } as never });
+    }
+  },
   component: DirectorPage,
 });
 
