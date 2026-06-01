@@ -62,7 +62,15 @@ function PromptPage() {
     if (!idea.trim()) return toast.error("Describe your video idea");
     setLoading(true);
     setResult(null);
+    setOutOfCredits(false);
+    const toastId = toast.loading(`Spending ${cost} DPOD · generating JSON…`);
+
+    // 1. Spend credits first
+    let spent = false;
     try {
+      const spend = await runSpend({ data: { amount: cost, reason: `json_prompt:${duration}s` } });
+      spent = true;
+      // 2. Call generation
       const res = await fetch("/api/video-prompt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -71,8 +79,23 @@ function PromptPage() {
       if (!res.ok) throw new Error((await res.text()) || `Failed (${res.status})`);
       const json = await res.json();
       setResult(JSON.stringify(json, null, 2));
+      qc.invalidateQueries({ queryKey: ["my-profile"] });
+      toast.success(`JSON ready! ${spend.creditsRemaining} DPOD left.`, { id: toastId });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed");
+      const msg = err instanceof Error ? err.message : "Failed";
+      if (msg.includes("INSUFFICIENT_CREDITS")) {
+        setOutOfCredits(true);
+        toast.error("Not enough DPOD", { id: toastId });
+      } else {
+        // Refund the spend if generation failed
+        if (spent) {
+          try {
+            await runRefund({ data: { amount: cost, reason: `refund:json_prompt` } });
+            qc.invalidateQueries({ queryKey: ["my-profile"] });
+          } catch {}
+        }
+        toast.error(msg, { id: toastId });
+      }
     } finally {
       setLoading(false);
     }
