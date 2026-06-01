@@ -42,21 +42,24 @@ export const Route = createFileRoute("/api/expand-prompt")({
         if (!description?.trim()) return new Response("description required", { status: 400 });
         const fmt: Format = (format && FORMAT_GUIDE[format] ? format : "drama");
         const dur = Math.max(3, Math.min(60, Number(duration) || 10));
-        const key = process.env.LOVABLE_API_KEY;
-        if (!key) return new Response("Missing LOVABLE_API_KEY", { status: 500 });
+        const key = process.env.BLUESMINDS_API_KEY;
+        if (!key) return new Response("Missing BLUESMINDS_API_KEY", { status: 500 });
+        const model = process.env.BLUESMINDS_MODEL || "gpt-4o-mini";
 
         try {
-          const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          const res = await fetch("https://api.bluesminds.com/v1/chat/completions", {
             method: "POST",
             headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
             body: JSON.stringify({
-              model: "google/gemini-3-flash-preview",
+              model,
               messages: [
                 { role: "system", content: buildSystem(fmt, tone || "", dur) },
                 { role: "user", content: description.trim() },
               ],
+              temperature: 0.7,
             }),
           });
+
           if (!res.ok) {
             const text = await res.text().catch(() => "");
             if (res.status === 429) return new Response("Rate limit — try again shortly.", { status: 429 });

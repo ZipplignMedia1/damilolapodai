@@ -131,22 +131,25 @@ export const Route = createFileRoute("/api/director-ai")({
         const { system, user, json } = systemFor(body);
         if (!user) return new Response("input required", { status: 400 });
 
-        const key = process.env.LOVABLE_API_KEY;
-        if (!key) return new Response("Missing LOVABLE_API_KEY", { status: 500 });
+        const key = process.env.BLUESMINDS_API_KEY;
+        if (!key) return new Response("Missing BLUESMINDS_API_KEY", { status: 500 });
+        const model = process.env.BLUESMINDS_MODEL || "gpt-4o-mini";
 
         try {
-          const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          const res = await fetch("https://api.bluesminds.com/v1/chat/completions", {
             method: "POST",
             headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
             body: JSON.stringify({
-              model: "google/gemini-3-flash-preview",
+              model,
               messages: [
                 { role: "system", content: system },
                 { role: "user", content: user },
               ],
+              temperature: 0.5,
               ...(json ? { response_format: { type: "json_object" } } : {}),
             }),
           });
+
           if (!res.ok) {
             const text = await res.text().catch(() => "");
             if (res.status === 429) return new Response("Rate limit — try again shortly.", { status: 429 });
