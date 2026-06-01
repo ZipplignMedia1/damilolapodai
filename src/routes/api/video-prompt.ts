@@ -93,6 +93,71 @@ Rules:
 - Keep the entire JSON under 1200 words.`;
 }
 
+type ChatMessage = { role: "system" | "user"; content: string };
+
+function gatewayError(message: string, status?: number) {
+  const error = new Error(message) as Error & { status?: number };
+  error.status = status;
+  return error;
+}
+
+async function callBluesminds(key: string, model: string, messages: ChatMessage[], signal: AbortSignal) {
+  const res = await fetch("https://api.bluesminds.com/v1/chat/completions", {
+    method: "POST",
+    signal,
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model,
+      messages,
+      response_format: { type: "json_object" },
+      temperature: 0.4,
+      max_tokens: 1800,
+    }),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw gatewayError(`Bluesminds ${res.status}: ${text.slice(0, 300)}`, res.status);
+  }
+  const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+  return json.choices?.[0]?.message?.content ?? "";
+}
+
+async function callGemini(key: string, messages: ChatMessage[]) {
+  const prompt = messages.map((m) => `${m.role.toUpperCase()}:\n${m.content}`).join("\n\n");
+  const model = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.4, responseMimeType: "application/json" },
+    }),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw gatewayError(`Gemini ${res.status}: ${text.slice(0, 300)}`, res.status);
+  }
+  const json = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
+  return json.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
+}
+
+async function generateJsonPrompt(messages: ChatMessage[], signal: AbortSignal) {
+  const bluesmindsKey = process.env.BLUESMINDS_API_KEY;
+  const geminiKey = process.env.GEMINI_API_KEY;
+  const bluesmindsModel = process.env.BLUESMINDS_MODEL || "gpt-4o-mini";
+
+  if (bluesmindsKey) {
+    try {
+      return await callBluesminds(bluesmindsKey, bluesmindsModel, messages, signal);
+    } catch (error) {
+      if (!geminiKey) throw error;
+    }
+  }
+
+  if (!geminiKey) throw gatewayError("Missing BLUESMINDS_API_KEY or GEMINI_API_KEY", 500);
+  return callGemini(geminiKey, messages);
+}
+
 function buildFallbackPrompt(idea: string, duration: number, target: TargetModel) {
   const beats = [0, Math.round(duration * 0.25), Math.round(duration * 0.5), Math.round(duration * 0.75), duration]
     .filter((value, index, values) => values.indexOf(value) === index);
@@ -140,66 +205,43 @@ function buildFallbackPrompt(idea: string, duration: number, target: TargetModel
   };
 }
 
+function parseJsonOrFallback(content: string, idea: string, duration: number, target: TargetModel) {
+  const cleaned = content
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/```\s*$/i, "")
+    .trim();
+  try {
+    return JSON.parse(cleaned) as unknown;
+  } catch {
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (match) {
+      try { return JSON.parse(match[0]) as unknown; } catch {}
+    }
+    return buildFallbackPrompt(idea, duration, target);
+  }
+}
+
 export const Route = createFileRoute("/api/video-prompt")({
   server: {
     handlers: {
       POST: async ({ request }) => {
         const { idea, duration, target } = (await request.json()) as Body;
-        const key = process.env.BLUESMINDS_API_KEY;
-        if (!key) return new Response("Missing BLUESMINDS_API_KEY", { status: 500 });
         if (!idea?.trim()) return new Response("idea required", { status: 400 });
         const dur = Math.max(3, Math.min(60, Number(duration) || 10));
         const tgt: TargetModel = (target && TARGET_NOTES[target] ? target : "universal");
-        const model = process.env.BLUESMINDS_MODEL || "gpt-4o-mini";
 
         try {
           const controller = new AbortController();
           const timeout = setTimeout(() => controller.abort(), 22000);
-          const res = await fetch("https://api.bluesminds.com/v1/chat/completions", {
-            method: "POST",
-            signal: controller.signal,
-            headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              model,
-              messages: [
-                { role: "system", content: buildSystem(tgt) },
-                { role: "user", content: `Idea: ${idea.trim()}\nDuration: ${dur} seconds.\nTarget: ${TARGET_LABEL[tgt]}.\nGenerate the JSON.` },
-              ],
-              response_format: { type: "json_object" },
-              temperature: 0.4,
-              max_tokens: 1800,
-            }),
-          });
+          const content = await generateJsonPrompt([
+            { role: "system", content: buildSystem(tgt) },
+            { role: "user", content: `Idea: ${idea.trim()}\nDuration: ${dur} seconds.\nTarget: ${TARGET_LABEL[tgt]}.\nGenerate the JSON.` },
+          ], controller.signal);
           clearTimeout(timeout);
-          if (!res.ok) {
-            const text = await res.text().catch(() => "");
-            if (res.status === 429) return new Response("Rate limit — try again shortly.", { status: 429 });
-            if (res.status === 402) return new Response("AI credits exhausted. Add credits in Settings.", { status: 402 });
-            return new Response(`Gateway ${res.status}: ${text.slice(0, 300)}`, { status: 502 });
-          }
-          const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-          let content = (json.choices?.[0]?.message?.content ?? "")
-            .replace(/^```(?:json)?\s*/i, "")
-            .replace(/```\s*$/i, "")
-            .trim();
-          let parsed: unknown;
-          try {
-            parsed = JSON.parse(content);
-          } catch {
-            const match = content.match(/\{[\s\S]*\}/);
-            if (match) {
-              try { parsed = JSON.parse(match[0]); } catch {}
-            }
-            if (!parsed) {
-              return new Response(`Model did not return valid JSON: ${content.slice(0, 300)}`, { status: 502 });
-            }
-          }
+          const parsed = parseJsonOrFallback(content, idea.trim(), dur, tgt);
           return Response.json(parsed);
         } catch (err) {
-          if (err instanceof Error && err.name === "AbortError") {
-            return Response.json(buildFallbackPrompt(idea.trim(), dur, tgt));
-          }
-          return new Response(err instanceof Error ? err.message : "Failed", { status: 502 });
+          return Response.json(buildFallbackPrompt(idea.trim(), dur, tgt));
         }
       },
     },

@@ -34,6 +34,65 @@ Rules:
 - 80–180 words. Vivid but tight.`;
 }
 
+type ChatMessage = { role: "system" | "user"; content: string };
+
+function gatewayError(message: string, status?: number) {
+  const error = new Error(message) as Error & { status?: number };
+  error.status = status;
+  return error;
+}
+
+async function callBluesminds(key: string, model: string, messages: ChatMessage[]) {
+  const res = await fetch("https://api.bluesminds.com/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model, messages, temperature: 0.7 }),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw gatewayError(`Bluesminds ${res.status}: ${text.slice(0, 300)}`, res.status);
+  }
+  const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+  return json.choices?.[0]?.message?.content ?? "";
+}
+
+async function callGemini(key: string, messages: ChatMessage[]) {
+  const prompt = messages.map((m) => `${m.role.toUpperCase()}:\n${m.content}`).join("\n\n");
+  const model = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { temperature: 0.7 } }),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw gatewayError(`Gemini ${res.status}: ${text.slice(0, 300)}`, res.status);
+  }
+  const json = (await res.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
+  return json.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
+}
+
+async function generatePrompt(messages: ChatMessage[]) {
+  const bluesmindsKey = process.env.BLUESMINDS_API_KEY;
+  const geminiKey = process.env.GEMINI_API_KEY;
+  const bluesmindsModel = process.env.BLUESMINDS_MODEL || "gpt-4o-mini";
+
+  if (bluesmindsKey) {
+    try {
+      return await callBluesminds(bluesmindsKey, bluesmindsModel, messages);
+    } catch (error) {
+      if (!geminiKey) throw error;
+    }
+  }
+
+  if (!geminiKey) throw gatewayError("Missing BLUESMINDS_API_KEY or GEMINI_API_KEY", 500);
+  return callGemini(geminiKey, messages);
+}
+
+function fallbackPrompt(description: string, fmt: Format, duration: number, tone?: string) {
+  return `${description.trim()}. A production-ready ${fmt.replace("_", " ")} prompt with a specific Nigerian setting, clear subject action, expressive wardrobe, natural performance, detailed environment textures, cinematic camera framing, ${fmt === "image" ? "aspect-ratio guidance" : `smooth camera motion across ${duration} seconds`}, ${tone || "grounded authentic"} mood, polished lighting, rich color palette, realistic shadows, and a clean AI-ready finish.`;
+}
+
 export const Route = createFileRoute("/api/expand-prompt")({
   server: {
     handlers: {
@@ -42,39 +101,19 @@ export const Route = createFileRoute("/api/expand-prompt")({
         if (!description?.trim()) return new Response("description required", { status: 400 });
         const fmt: Format = (format && FORMAT_GUIDE[format] ? format : "drama");
         const dur = Math.max(3, Math.min(60, Number(duration) || 10));
-        const key = process.env.BLUESMINDS_API_KEY;
-        if (!key) return new Response("Missing BLUESMINDS_API_KEY", { status: 500 });
-        const model = process.env.BLUESMINDS_MODEL || "gpt-4o-mini";
 
         try {
-          const res = await fetch("https://api.bluesminds.com/v1/chat/completions", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              model,
-              messages: [
-                { role: "system", content: buildSystem(fmt, tone || "", dur) },
-                { role: "user", content: description.trim() },
-              ],
-              temperature: 0.7,
-            }),
-          });
-
-          if (!res.ok) {
-            const text = await res.text().catch(() => "");
-            if (res.status === 429) return new Response("Rate limit — try again shortly.", { status: 429 });
-            if (res.status === 402) return new Response("AI credits exhausted.", { status: 402 });
-            return new Response(`Gateway ${res.status}: ${text.slice(0, 300)}`, { status: 502 });
-          }
-          const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-          const prompt = (json.choices?.[0]?.message?.content ?? "")
+          const prompt = (await generatePrompt([
+            { role: "system", content: buildSystem(fmt, tone || "", dur) },
+            { role: "user", content: description.trim() },
+          ]))
             .replace(/^```[a-z]*\s*/i, "")
             .replace(/```\s*$/i, "")
             .replace(/^\s*prompt\s*:\s*/i, "")
             .trim();
           return Response.json({ prompt, format: fmt });
         } catch (err) {
-          return new Response(err instanceof Error ? err.message : "Failed", { status: 502 });
+          return Response.json({ prompt: fallbackPrompt(description, fmt, dur, tone), format: fmt });
         }
       },
     },
