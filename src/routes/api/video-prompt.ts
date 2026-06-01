@@ -74,7 +74,7 @@ const TARGET_LABEL: Record<TargetModel, string> = {
 };
 
 function buildSystem(target: TargetModel) {
-  return `You are a cinematic video prompt engineer for ${TARGET_LABEL[target]}. Convert the user's idea into a single JSON object describing a shot-by-shot video plan.
+  return `You are a cinematic video prompt engineer for ${TARGET_LABEL[target]}. Convert the user's idea into a compact JSON object describing a shot-by-shot video plan.
 
 Base schema (extend with the target-specific fields described below):
 ${BASE_SCHEMA}
@@ -85,11 +85,59 @@ Target-specific guidance: ${TARGET_NOTES[target]}
 Rules:
 - Output ONLY the JSON object. No markdown fences, no commentary.
 - Add a root-level "target_model": "${target}" field.
-- 7-10 camera beats spread across the duration.
+- 4-6 camera beats spread across the duration.
 - 1-3 characters depending on the idea. If no characters fit, use an empty array.
 - All "time" values are seconds within [0, duration], in increasing order per array.
 - If the idea mentions a brand/product, fill branding; otherwise use empty strings.
-- Keep voice_lines short and natural; reflect the requested language/tone.`;
+- Keep voice_lines short and natural; reflect the requested language/tone.
+- Keep the entire JSON under 1200 words.`;
+}
+
+function buildFallbackPrompt(idea: string, duration: number, target: TargetModel) {
+  const beats = [0, Math.round(duration * 0.25), Math.round(duration * 0.5), Math.round(duration * 0.75), duration]
+    .filter((value, index, values) => values.indexOf(value) === index);
+
+  return {
+    target_model: target,
+    shot_number: 1,
+    duration,
+    scene: idea,
+    camera: beats.map((time, index) => ({
+      time,
+      angle: [
+        "establishing wide shot introducing the setting and subjects",
+        "smooth medium shot following the main action",
+        "close-up emphasizing emotion and product detail",
+        "dynamic tracking shot with clear motion continuity",
+        "hero end frame with the key visual centered",
+      ][index] ?? "cinematic continuation shot",
+    })),
+    characters: [
+      {
+        name: "Main subject",
+        actions: beats.map((time, index) => ({
+          time,
+          action: index === 0 ? `enters the scene for: ${idea}` : "continues the performance with natural, believable motion",
+        })),
+        expressions: beats.map((time, index) => ({
+          time,
+          expression: index < beats.length - 1 ? "engaged and expressive" : "confident and satisfied",
+        })),
+        voice_lines: [{ time: Math.min(2, duration), line: "This is exactly what we needed." }],
+      },
+    ],
+    sound_effects: [
+      { time: 0, effect: "soft ambient room tone" },
+      { time: Math.round(duration * 0.5), effect: "subtle cinematic whoosh" },
+      { time: duration, effect: "clean branded end sting" },
+    ],
+    lighting: "bright commercial lighting with soft highlights and natural shadows",
+    environment: "polished advertising set designed around the requested concept",
+    branding: { product_name: "", tagline: "" },
+    style: "cinematic commercial, realistic motion, polished product-advertising finish",
+    motion_strength: target === "seedance" ? 7 : undefined,
+    fallback: true,
+  };
 }
 
 export const Route = createFileRoute("/api/video-prompt")({
@@ -105,8 +153,11 @@ export const Route = createFileRoute("/api/video-prompt")({
         const model = process.env.BLUESMINDS_MODEL || "gpt-4o-mini";
 
         try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 22000);
           const res = await fetch("https://api.bluesminds.com/v1/chat/completions", {
             method: "POST",
+            signal: controller.signal,
             headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
             body: JSON.stringify({
               model,
@@ -115,8 +166,11 @@ export const Route = createFileRoute("/api/video-prompt")({
                 { role: "user", content: `Idea: ${idea.trim()}\nDuration: ${dur} seconds.\nTarget: ${TARGET_LABEL[tgt]}.\nGenerate the JSON.` },
               ],
               response_format: { type: "json_object" },
+              temperature: 0.4,
+              max_tokens: 1800,
             }),
           });
+          clearTimeout(timeout);
           if (!res.ok) {
             const text = await res.text().catch(() => "");
             if (res.status === 429) return new Response("Rate limit — try again shortly.", { status: 429 });
@@ -142,6 +196,9 @@ export const Route = createFileRoute("/api/video-prompt")({
           }
           return Response.json(parsed);
         } catch (err) {
+          if (err instanceof Error && err.name === "AbortError") {
+            return Response.json(buildFallbackPrompt(idea.trim(), dur, tgt));
+          }
           return new Response(err instanceof Error ? err.message : "Failed", { status: 502 });
         }
       },
