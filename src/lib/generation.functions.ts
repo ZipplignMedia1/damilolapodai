@@ -126,12 +126,14 @@ export const generateVideo = createServerFn({ method: "POST" })
       };
     } catch (err) {
       // Refund credits if generation failed
-      await supabase.rpc("credit_for_payment", {
-        _reference: `refund-${userId}-${Date.now()}`,
-        _user_id: userId,
-        _credits: cost,
-        _kind: "refund:video",
-      }).catch(() => {});
+      try {
+        await supabase.rpc("credit_for_payment", {
+          _reference: `refund-${userId}-${Date.now()}`,
+          _user_id: userId,
+          _credits: cost,
+          _kind: "refund:video",
+        });
+      } catch {}
       throw err;
     }
   });
