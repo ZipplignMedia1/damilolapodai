@@ -18,6 +18,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as ImageRouteImport } from './routes/image'
 import { Route as HomeRouteImport } from './routes/home'
 import { Route as HistoryRouteImport } from './routes/history'
+import { Route as DirectorRouteImport } from './routes/director'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiVideoPromptRouteImport } from './routes/api/video-prompt'
 import { Route as ApiVerifyGeminiRouteImport } from './routes/api/verify-gemini'
@@ -26,6 +27,7 @@ import { Route as ApiStoryboardSceneRouteImport } from './routes/api/storyboard-
 import { Route as ApiKeyframesRouteImport } from './routes/api/keyframes'
 import { Route as ApiGenerateVideoRouteImport } from './routes/api/generate-video'
 import { Route as ApiGenerateImageRouteImport } from './routes/api/generate-image'
+import { Route as ApiExpandPromptRouteImport } from './routes/api/expand-prompt'
 import { Route as ApiPublicPaystackWebhookRouteImport } from './routes/api/public/paystack-webhook'
 
 const VideoRoute = VideoRouteImport.update({
@@ -73,6 +75,11 @@ const HistoryRoute = HistoryRouteImport.update({
   path: '/history',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DirectorRoute = DirectorRouteImport.update({
+  id: '/director',
+  path: '/director',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -113,6 +120,11 @@ const ApiGenerateImageRoute = ApiGenerateImageRouteImport.update({
   path: '/api/generate-image',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiExpandPromptRoute = ApiExpandPromptRouteImport.update({
+  id: '/api/expand-prompt',
+  path: '/api/expand-prompt',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicPaystackWebhookRoute =
   ApiPublicPaystackWebhookRouteImport.update({
     id: '/api/public/paystack-webhook',
@@ -122,6 +134,7 @@ const ApiPublicPaystackWebhookRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/director': typeof DirectorRoute
   '/history': typeof HistoryRoute
   '/home': typeof HomeRoute
   '/image': typeof ImageRoute
@@ -131,6 +144,7 @@ export interface FileRoutesByFullPath {
   '/storyboard': typeof StoryboardRoute
   '/topup': typeof TopupRoute
   '/video': typeof VideoRoute
+  '/api/expand-prompt': typeof ApiExpandPromptRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/generate-video': typeof ApiGenerateVideoRoute
   '/api/keyframes': typeof ApiKeyframesRoute
@@ -142,6 +156,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/director': typeof DirectorRoute
   '/history': typeof HistoryRoute
   '/home': typeof HomeRoute
   '/image': typeof ImageRoute
@@ -151,6 +166,7 @@ export interface FileRoutesByTo {
   '/storyboard': typeof StoryboardRoute
   '/topup': typeof TopupRoute
   '/video': typeof VideoRoute
+  '/api/expand-prompt': typeof ApiExpandPromptRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/generate-video': typeof ApiGenerateVideoRoute
   '/api/keyframes': typeof ApiKeyframesRoute
@@ -163,6 +179,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/director': typeof DirectorRoute
   '/history': typeof HistoryRoute
   '/home': typeof HomeRoute
   '/image': typeof ImageRoute
@@ -172,6 +189,7 @@ export interface FileRoutesById {
   '/storyboard': typeof StoryboardRoute
   '/topup': typeof TopupRoute
   '/video': typeof VideoRoute
+  '/api/expand-prompt': typeof ApiExpandPromptRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/generate-video': typeof ApiGenerateVideoRoute
   '/api/keyframes': typeof ApiKeyframesRoute
@@ -185,6 +203,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/director'
     | '/history'
     | '/home'
     | '/image'
@@ -194,6 +213,7 @@ export interface FileRouteTypes {
     | '/storyboard'
     | '/topup'
     | '/video'
+    | '/api/expand-prompt'
     | '/api/generate-image'
     | '/api/generate-video'
     | '/api/keyframes'
@@ -205,6 +225,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/director'
     | '/history'
     | '/home'
     | '/image'
@@ -214,6 +235,7 @@ export interface FileRouteTypes {
     | '/storyboard'
     | '/topup'
     | '/video'
+    | '/api/expand-prompt'
     | '/api/generate-image'
     | '/api/generate-video'
     | '/api/keyframes'
@@ -225,6 +247,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/director'
     | '/history'
     | '/home'
     | '/image'
@@ -234,6 +257,7 @@ export interface FileRouteTypes {
     | '/storyboard'
     | '/topup'
     | '/video'
+    | '/api/expand-prompt'
     | '/api/generate-image'
     | '/api/generate-video'
     | '/api/keyframes'
@@ -246,6 +270,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DirectorRoute: typeof DirectorRoute
   HistoryRoute: typeof HistoryRoute
   HomeRoute: typeof HomeRoute
   ImageRoute: typeof ImageRoute
@@ -255,6 +280,7 @@ export interface RootRouteChildren {
   StoryboardRoute: typeof StoryboardRoute
   TopupRoute: typeof TopupRoute
   VideoRoute: typeof VideoRoute
+  ApiExpandPromptRoute: typeof ApiExpandPromptRoute
   ApiGenerateImageRoute: typeof ApiGenerateImageRoute
   ApiGenerateVideoRoute: typeof ApiGenerateVideoRoute
   ApiKeyframesRoute: typeof ApiKeyframesRoute
@@ -330,6 +356,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HistoryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/director': {
+      id: '/director'
+      path: '/director'
+      fullPath: '/director'
+      preLoaderRoute: typeof DirectorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -386,6 +419,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiGenerateImageRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/expand-prompt': {
+      id: '/api/expand-prompt'
+      path: '/api/expand-prompt'
+      fullPath: '/api/expand-prompt'
+      preLoaderRoute: typeof ApiExpandPromptRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/paystack-webhook': {
       id: '/api/public/paystack-webhook'
       path: '/api/public/paystack-webhook'
@@ -398,6 +438,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DirectorRoute: DirectorRoute,
   HistoryRoute: HistoryRoute,
   HomeRoute: HomeRoute,
   ImageRoute: ImageRoute,
@@ -407,6 +448,7 @@ const rootRouteChildren: RootRouteChildren = {
   StoryboardRoute: StoryboardRoute,
   TopupRoute: TopupRoute,
   VideoRoute: VideoRoute,
+  ApiExpandPromptRoute: ApiExpandPromptRoute,
   ApiGenerateImageRoute: ApiGenerateImageRoute,
   ApiGenerateVideoRoute: ApiGenerateVideoRoute,
   ApiKeyframesRoute: ApiKeyframesRoute,
