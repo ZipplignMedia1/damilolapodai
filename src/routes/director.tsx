@@ -74,14 +74,35 @@ function DirectorPage() {
   );
 }
 
-async function callDirector(body: Record<string, unknown>) {
-  const res = await fetch("/api/director-ai", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error((await res.text()) || `Failed (${res.status})`);
-  return (await res.json()) as { result: unknown };
+function useDirector() {
+  const qc = useQueryClient();
+  const runSpend = useServerFn(spendCredits);
+  const runRefund = useServerFn(refundCredits);
+
+  return async function run(
+    cost: number,
+    reason: string,
+    body: Record<string, unknown>,
+  ): Promise<{ result: unknown; creditsRemaining: number }> {
+    const spend = await runSpend({ data: { amount: cost, reason } });
+    try {
+      const res = await fetch("/api/director-ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error((await res.text()) || `Failed (${res.status})`);
+      const json = (await res.json()) as { result: unknown };
+      qc.invalidateQueries({ queryKey: ["my-profile"] });
+      return { result: json.result, creditsRemaining: spend.creditsRemaining };
+    } catch (err) {
+      try {
+        await runRefund({ data: { amount: cost, reason: `refund:${reason}` } });
+        qc.invalidateQueries({ queryKey: ["my-profile"] });
+      } catch {}
+      throw err;
+    }
+  };
 }
 
 function CopyBtn({ text }: { text: string }) {
