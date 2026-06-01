@@ -84,9 +84,10 @@ export const generateStoryboard = createServerFn({ method: "POST" })
     const key = process.env.LOVABLE_API_KEY;
     if (!key) throw new Error("Server misconfigured: missing LOVABLE_API_KEY");
 
-    // Spend 1 credit atomically (throws INSUFFICIENT_CREDITS if balance < 1)
+    // Spend 2 DPOD credits per generation (throws INSUFFICIENT_CREDITS if balance < 2)
+    const GENERATION_COST = 2;
     const { data: newBalance, error: spendErr } = await supabase.rpc("spend_credit", {
-      _amount: 1,
+      _amount: GENERATION_COST,
       _reason: "generation",
     });
     if (spendErr) {
@@ -100,18 +101,18 @@ export const generateStoryboard = createServerFn({ method: "POST" })
     const refund = async () => {
       if (refunded) return;
       refunded = true;
-      // Best-effort refund via direct update + log row
+      // Best-effort refund of the full generation cost
       const { data: prof } = await supabase
         .from("profiles")
         .select("credits")
         .eq("user_id", userId)
         .maybeSingle();
       const before = prof?.credits ?? 0;
-      const after = before + 1;
+      const after = before + GENERATION_COST;
       await supabase.from("profiles").update({ credits: after }).eq("user_id", userId);
       await supabase.from("credit_transactions").insert({
         user_id: userId,
-        amount: 1,
+        amount: GENERATION_COST,
         reason: "refund_failed_generation",
         balance_after: after,
       });
