@@ -450,14 +450,21 @@ function AnalyzeTab() {
   const [target, setTarget] = useState("image");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalyzeResult | null>(null);
+  const director = useDirector();
+  const cost = 1;
 
   async function run() {
     if (!prompt.trim()) return toast.error("Paste a prompt to analyze");
     setLoading(true); setResult(null);
+    const toastId = toast.loading(`Spending ${cost} DPOD · analyzing…`);
     try {
-      const json = await callDirector({ mode: "analyze", prompt, target });
+      const json = await director(cost, "director:analyze", { mode: "analyze", prompt, target });
       setResult(json.result as AnalyzeResult);
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+      toast.success(`Done! ${json.creditsRemaining} DPOD left.`, { id: toastId });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed";
+      toast.error(msg.includes("INSUFFICIENT_CREDITS") ? "Not enough DPOD" : msg, { id: toastId });
+    }
     finally { setLoading(false); }
   }
 
