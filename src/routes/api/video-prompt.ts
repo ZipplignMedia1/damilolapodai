@@ -124,10 +124,21 @@ export const Route = createFileRoute("/api/video-prompt")({
             return new Response(`Gateway ${res.status}: ${text.slice(0, 300)}`, { status: 502 });
           }
           const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-          const content = (json.choices?.[0]?.message?.content ?? "").replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+          let content = (json.choices?.[0]?.message?.content ?? "")
+            .replace(/^```(?:json)?\s*/i, "")
+            .replace(/```\s*$/i, "")
+            .trim();
           let parsed: unknown;
-          try { parsed = JSON.parse(content); } catch {
-            return new Response("Model did not return valid JSON", { status: 502 });
+          try {
+            parsed = JSON.parse(content);
+          } catch {
+            const match = content.match(/\{[\s\S]*\}/);
+            if (match) {
+              try { parsed = JSON.parse(match[0]); } catch {}
+            }
+            if (!parsed) {
+              return new Response(`Model did not return valid JSON: ${content.slice(0, 300)}`, { status: 502 });
+            }
           }
           return Response.json(parsed);
         } catch (err) {
