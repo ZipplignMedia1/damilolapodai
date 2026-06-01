@@ -35,6 +35,22 @@ export const Route = createFileRoute("/prompt")({
   component: PromptPage,
 });
 
+export const Route = createFileRoute("/prompt")({
+  head: () => ({
+    meta: [
+      { title: "JSON Prompt Generator — DAMILOLAPOD AI" },
+      { name: "description", content: "Turn any video idea into a structured shot-by-shot JSON prompt." },
+    ],
+  }),
+  beforeLoad: async ({ location }) => {
+    const { data } = await supabase.auth.getUser();
+    if (!data.user) {
+      throw redirect({ to: "/login", search: { redirect: location.href } as never });
+    }
+  },
+  component: PromptPage,
+});
+
 function PromptPage() {
   const [idea, setIdea] = useState("");
   const [duration, setDuration] = useState(10);
@@ -42,6 +58,12 @@ function PromptPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [outOfCredits, setOutOfCredits] = useState(false);
+  const qc = useQueryClient();
+  const runSpend = useServerFn(spendCredits);
+  const runRefund = useServerFn(refundCredits);
+
+  const cost = duration; // 1 DPOD per second of generated plan
 
   async function generate() {
     if (!idea.trim()) return toast.error("Describe your video idea");
