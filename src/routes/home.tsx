@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Code2, ImageIcon, Video, Layers, Library, ArrowRight } from "lucide-react";
+import { Code2, ImageIcon, Video, Layers, Library, ArrowRight, Wand2 } from "lucide-react";
 
 export const Route = createFileRoute("/home")({
   head: () => ({
@@ -12,6 +12,7 @@ export const Route = createFileRoute("/home")({
 });
 
 const tiles = [
+  { to: "/director", label: "Director", desc: "Prompt engineer for scenes", Icon: Wand2 },
   { to: "/prompt", label: "JSON", desc: "Prompt generator", Icon: Code2 },
   { to: "/image", label: "Image", desc: "Generate from prompt", Icon: ImageIcon },
   { to: "/video", label: "Video", desc: "Bring it to life", Icon: Video },
