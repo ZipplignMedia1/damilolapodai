@@ -15,6 +15,44 @@ export const getMyProfile = createServerFn({ method: "GET" })
     return data ?? { display_name: null, avatar_url: null, credits: 0 };
   });
 
+// Spend N DPOD with a reason label. Returns the new balance.
+export const spendCredits = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { amount: number; reason: string }) =>
+    z.object({ amount: z.number().int().min(1).max(100), reason: z.string().min(1).max(80) }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: newBalance, error } = await supabase.rpc("spend_credit", {
+      _amount: data.amount,
+      _reason: data.reason,
+    });
+    if (error) {
+      if (error.message.includes("INSUFFICIENT_CREDITS")) throw new Error("INSUFFICIENT_CREDITS");
+      throw new Error(error.message);
+    }
+    return { creditsRemaining: (newBalance as number) ?? 0 };
+  });
+
+// Refund N DPOD (used when a generation fails after credits were spent).
+export const refundCredits = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { amount: number; reason: string }) =>
+    z.object({ amount: z.number().int().min(1).max(100), reason: z.string().min(1).max(80) }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: newBalance, error } = await supabase.rpc("credit_for_payment", {
+      _reference: `refund-${userId}-${Date.now()}`,
+      _user_id: userId,
+      _credits: data.amount,
+      _kind: data.reason,
+    });
+    if (error) throw new Error(error.message);
+    return { creditsRemaining: (newBalance as number) ?? 0 };
+  });
+
+
 const SceneSchema = z.object({
   scene_number: z.number().int(),
   title: z.string(),
