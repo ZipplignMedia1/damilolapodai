@@ -79,7 +79,7 @@ function VideoPage() {
       });
       setResult(data);
       qc.invalidateQueries({ queryKey: ["my-profile"] });
-      toast.success(`Video ready! ${data.creditsRemaining} DPOD left.`, { id: toastId });
+      toast.success(`Video ready!`, { id: toastId });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Generation failed";
       if (msg.includes("INSUFFICIENT_CREDITS")) {
