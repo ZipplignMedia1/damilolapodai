@@ -84,7 +84,7 @@ function ImagePage() {
       });
       setResult(data);
       qc.invalidateQueries({ queryKey: ["my-profile"] });
-      toast.success(`Image ready! ${data.creditsRemaining} DPOD left.`, { id: toastId });
+      toast.success(`Image ready!`, { id: toastId });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Generation failed";
       if (msg.includes("INSUFFICIENT_CREDITS")) {
