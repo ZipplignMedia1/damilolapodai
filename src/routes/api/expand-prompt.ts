@@ -89,6 +89,10 @@ async function generatePrompt(messages: ChatMessage[]) {
   return callGemini(geminiKey, messages);
 }
 
+function fallbackPrompt(description: string, fmt: Format, duration: number, tone?: string) {
+  return `${description.trim()}. A production-ready ${fmt.replace("_", " ")} prompt with a specific Nigerian setting, clear subject action, expressive wardrobe, natural performance, detailed environment textures, cinematic camera framing, ${fmt === "image" ? "aspect-ratio guidance" : `smooth camera motion across ${duration} seconds`}, ${tone || "grounded authentic"} mood, polished lighting, rich color palette, realistic shadows, and a clean AI-ready finish.`;
+}
+
 export const Route = createFileRoute("/api/expand-prompt")({
   server: {
     handlers: {
@@ -109,7 +113,7 @@ export const Route = createFileRoute("/api/expand-prompt")({
             .trim();
           return Response.json({ prompt, format: fmt });
         } catch (err) {
-          return new Response(err instanceof Error ? err.message : "Failed", { status: 502 });
+          return Response.json({ prompt: fallbackPrompt(description, fmt, dur, tone), format: fmt });
         }
       },
     },
