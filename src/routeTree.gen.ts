@@ -28,6 +28,7 @@ import { Route as ApiKeyframesRouteImport } from './routes/api/keyframes'
 import { Route as ApiGenerateVideoRouteImport } from './routes/api/generate-video'
 import { Route as ApiGenerateImageRouteImport } from './routes/api/generate-image'
 import { Route as ApiExpandPromptRouteImport } from './routes/api/expand-prompt'
+import { Route as ApiDirectorAiRouteImport } from './routes/api/director-ai'
 import { Route as ApiPublicPaystackWebhookRouteImport } from './routes/api/public/paystack-webhook'
 
 const VideoRoute = VideoRouteImport.update({
@@ -125,6 +126,11 @@ const ApiExpandPromptRoute = ApiExpandPromptRouteImport.update({
   path: '/api/expand-prompt',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDirectorAiRoute = ApiDirectorAiRouteImport.update({
+  id: '/api/director-ai',
+  path: '/api/director-ai',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicPaystackWebhookRoute =
   ApiPublicPaystackWebhookRouteImport.update({
     id: '/api/public/paystack-webhook',
@@ -144,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/storyboard': typeof StoryboardRoute
   '/topup': typeof TopupRoute
   '/video': typeof VideoRoute
+  '/api/director-ai': typeof ApiDirectorAiRoute
   '/api/expand-prompt': typeof ApiExpandPromptRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/generate-video': typeof ApiGenerateVideoRoute
@@ -166,6 +173,7 @@ export interface FileRoutesByTo {
   '/storyboard': typeof StoryboardRoute
   '/topup': typeof TopupRoute
   '/video': typeof VideoRoute
+  '/api/director-ai': typeof ApiDirectorAiRoute
   '/api/expand-prompt': typeof ApiExpandPromptRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/generate-video': typeof ApiGenerateVideoRoute
@@ -189,6 +197,7 @@ export interface FileRoutesById {
   '/storyboard': typeof StoryboardRoute
   '/topup': typeof TopupRoute
   '/video': typeof VideoRoute
+  '/api/director-ai': typeof ApiDirectorAiRoute
   '/api/expand-prompt': typeof ApiExpandPromptRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/generate-video': typeof ApiGenerateVideoRoute
@@ -213,6 +222,7 @@ export interface FileRouteTypes {
     | '/storyboard'
     | '/topup'
     | '/video'
+    | '/api/director-ai'
     | '/api/expand-prompt'
     | '/api/generate-image'
     | '/api/generate-video'
@@ -235,6 +245,7 @@ export interface FileRouteTypes {
     | '/storyboard'
     | '/topup'
     | '/video'
+    | '/api/director-ai'
     | '/api/expand-prompt'
     | '/api/generate-image'
     | '/api/generate-video'
@@ -257,6 +268,7 @@ export interface FileRouteTypes {
     | '/storyboard'
     | '/topup'
     | '/video'
+    | '/api/director-ai'
     | '/api/expand-prompt'
     | '/api/generate-image'
     | '/api/generate-video'
@@ -280,6 +292,7 @@ export interface RootRouteChildren {
   StoryboardRoute: typeof StoryboardRoute
   TopupRoute: typeof TopupRoute
   VideoRoute: typeof VideoRoute
+  ApiDirectorAiRoute: typeof ApiDirectorAiRoute
   ApiExpandPromptRoute: typeof ApiExpandPromptRoute
   ApiGenerateImageRoute: typeof ApiGenerateImageRoute
   ApiGenerateVideoRoute: typeof ApiGenerateVideoRoute
@@ -426,6 +439,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiExpandPromptRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/director-ai': {
+      id: '/api/director-ai'
+      path: '/api/director-ai'
+      fullPath: '/api/director-ai'
+      preLoaderRoute: typeof ApiDirectorAiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/paystack-webhook': {
       id: '/api/public/paystack-webhook'
       path: '/api/public/paystack-webhook'
@@ -448,6 +468,7 @@ const rootRouteChildren: RootRouteChildren = {
   StoryboardRoute: StoryboardRoute,
   TopupRoute: TopupRoute,
   VideoRoute: VideoRoute,
+  ApiDirectorAiRoute: ApiDirectorAiRoute,
   ApiExpandPromptRoute: ApiExpandPromptRoute,
   ApiGenerateImageRoute: ApiGenerateImageRoute,
   ApiGenerateVideoRoute: ApiGenerateVideoRoute,
@@ -461,13 +482,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
