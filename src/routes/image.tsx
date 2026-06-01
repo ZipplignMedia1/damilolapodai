@@ -72,7 +72,7 @@ function ImagePage() {
     setLoading(true);
     setResult(null);
     setOutOfCredits(false);
-    const toastId = toast.loading(`Spending ${cost} DPOD · generating image…`);
+    const toastId = toast.loading(`Generating image…`);
     try {
       const data = await runGenerate({
         data: {
