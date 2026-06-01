@@ -141,7 +141,7 @@ function VideoPage() {
                 }`}
               >
                 {d}s
-                <span className="rounded bg-primary-foreground/20 px-1 py-0.5 text-[10px]">{d} DPOD</span>
+                <span className="rounded bg-primary-foreground/20 px-1 py-0.5 text-[10px]">Free</span>
               </button>
             ))}
           </div>
