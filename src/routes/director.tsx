@@ -163,7 +163,6 @@ function PromptTab() {
     finally { setLoading(false); }
   }
 
-  const isImage = format === "image";
   return (
     <>
       <SectionCard title="Prompt Director" subtitle="Rough idea in → cinema-grade prompt out.">
