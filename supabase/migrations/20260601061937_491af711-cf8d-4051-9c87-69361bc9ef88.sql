@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.credit_for_payment(text, uuid, integer, text) TO authenticated, service_role;
