@@ -82,80 +82,50 @@ export const generateVideo = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const cost = data.duration; // 5 or 10 DPOD
     const key = process.env.WAVESPEED_API_KEY;
     if (!key) throw new Error("Server misconfigured: missing WAVESPEED_API_KEY");
 
-    // Spend credits
-    const { data: newBalance, error: spendErr } = await supabase.rpc("spend_credit", {
-      _amount: cost,
-      _reason: "video_generation",
-    });
-    if (spendErr) {
-      if (spendErr.message.includes("INSUFFICIENT_CREDITS")) {
-        throw new Error("INSUFFICIENT_CREDITS");
-      }
-      throw new Error(spendErr.message);
-    }
+    // Video generation is currently FREE (on hold — no credit deduction).
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("credits")
+      .eq("user_id", userId)
+      .maybeSingle();
+    const creditsRemaining = prof?.credits ?? 0;
 
-    let refunded = false;
-    const refund = async () => {
-      if (refunded) return;
-      refunded = true;
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("credits")
-        .eq("user_id", userId)
-        .maybeSingle();
-      const before = prof?.credits ?? 0;
-      const after = before + cost;
-      await supabase.from("profiles").update({ credits: after }).eq("user_id", userId);
-      await supabase.from("credit_transactions").insert({
+    const videoUrl = await callWaveSpeed(
+      data.prompt,
+      data.duration,
+      data.aspectRatio,
+      data.imageDataUrl ?? null,
+      key,
+    );
+
+    const { data: row, error: libErr } = await supabase
+      .from("library_items")
+      .insert({
         user_id: userId,
-        amount: cost,
-        reason: "refund_failed_video_generation",
-        balance_after: after,
-      });
+        kind: "video",
+        prompt: data.prompt,
+        media_url: videoUrl,
+        payload: {
+          aspectRatio: data.aspectRatio,
+          duration: data.duration,
+          mode: data.imageDataUrl ? "image" : "text",
+        },
+      })
+      .select()
+      .single();
+
+    if (libErr) throw new Error(libErr.message);
+
+    return {
+      videoUrl,
+      itemId: row.id,
+      creditsRemaining,
     };
-
-    try {
-      const videoUrl = await callWaveSpeed(
-        data.prompt,
-        data.duration,
-        data.aspectRatio,
-        data.imageDataUrl ?? null,
-        key,
-      );
-
-      // Save to library
-      const { data: row, error: libErr } = await supabase
-        .from("library_items")
-        .insert({
-          user_id: userId,
-          kind: "video",
-          prompt: data.prompt,
-          media_url: videoUrl,
-          payload: {
-            aspectRatio: data.aspectRatio,
-            duration: data.duration,
-            mode: data.imageDataUrl ? "image" : "text",
-          },
-        })
-        .select()
-        .single();
-
-      if (libErr) throw new Error(libErr.message);
-
-      return {
-        videoUrl,
-        itemId: row.id,
-        creditsRemaining: newBalance as number,
-      };
-    } catch (err) {
-      await refund();
-      throw err;
-    }
   });
+
 
 // ─── Image Generation ────────────────────────────────────────────────
 
