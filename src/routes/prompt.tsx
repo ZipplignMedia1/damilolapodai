@@ -164,8 +164,22 @@ function PromptPage() {
       </div>
 
       <Button onClick={generate} disabled={loading} className="w-full h-12 rounded-xl text-base font-bold">
-        {loading ? (<><Loader2 className="h-5 w-5 animate-spin" /> Generating…</>) : (<><Sparkles className="h-5 w-5" /> Generate JSON Prompt</>)}
+        {loading ? (<><Loader2 className="h-5 w-5 animate-spin" /> Generating…</>) : (<><Sparkles className="h-5 w-5" /> Generate · {cost} DPOD</>)}
       </Button>
+
+      {outOfCredits && (
+        <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-sm">
+          <div className="flex items-center gap-2 font-semibold text-destructive">
+            <Coins className="h-4 w-4" /> Out of DPOD
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            You need {cost} DPOD to generate this JSON prompt.
+          </p>
+          <Link to="/topup" className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground">
+            Top up DPOD
+          </Link>
+        </div>
+      )}
 
       {result && (
         <div className="rounded-2xl border border-border bg-card shadow-sm">
