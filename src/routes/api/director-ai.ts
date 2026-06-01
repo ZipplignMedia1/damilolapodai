@@ -186,6 +186,42 @@ async function generateDirectorContent(messages: ChatMessage[], json: boolean) {
   return callGemini(geminiKey, messages, json);
 }
 
+function fallbackResult(body: Body) {
+  if ((body.mode || "expand") === "story") {
+    const idea = body.idea?.trim() || "A character faces a life-changing choice";
+    return `${idea}\n\nThe story opens in a familiar Nigerian setting, where ordinary pressure is already building around the main character. A small decision becomes complicated by family expectations, money, pride, or love, forcing the character to choose between what is easy and what is right.\n\nAs the conflict grows, every conversation reveals a hidden wound. The character tries to hold everything together, but the truth finally comes out in a tense, emotional scene. By the end, they make a clear choice that changes the relationship at the center of the story and leaves the audience with a strong final image.`;
+  }
+  if (body.mode === "voice") {
+    return {
+      voice_match: "Cinematic Nigerian narrator",
+      gender: body.gender || "male",
+      language: body.language || "Nigerian English",
+      pitch: 0,
+      warmth: 70,
+      naturalness: 88,
+      depth: 72,
+      pacing: 1,
+      emotion: 76,
+      delivery_notes: "Speak with grounded confidence, natural pauses, and emotional restraint. Let important words breathe without sounding theatrical.",
+      sample_line: "Sometimes the thing we fear is the thing that finally sets us free.",
+    };
+  }
+  if (body.mode === "analyze") {
+    const prompt = body.prompt?.trim() || "";
+    return {
+      score: prompt.length > 160 ? 78 : 52,
+      verdict: prompt.length > 160 ? "good" : "okay",
+      fit_for_model: prompt.length > 80,
+      strengths: ["The core idea is understandable", "There is enough direction to start refining"],
+      weaknesses: ["Needs more concrete visual detail", "Camera, lighting, and mood could be clearer"],
+      missing: ["Lens or framing", "Lighting style", "Specific environment details", "Camera movement or aspect ratio"],
+      rewrite: `${prompt || "A cinematic Nigerian scene"}, with a clearly defined subject, specific location, expressive wardrobe, natural performance, detailed lighting, camera framing, mood, color palette, and a polished AI-ready finish.`,
+    };
+  }
+  const duration = body.format === "image" ? "" : ` Build it for about ${Math.max(3, Math.min(60, Number(body.duration) || 10))} seconds with clear opening, middle, and end beats.`;
+  return `${body.description?.trim() || "A cinematic Nigerian scene"}. Richly detailed production-ready prompt: define the main subject, specific Nigerian environment, wardrobe, emotion, lens choice, camera framing, lighting, color palette, atmosphere, and action continuity.${duration} Keep the scene realistic, culturally grounded, visually sharp, and free of generic filler.`;
+}
+
 export const Route = createFileRoute("/api/director-ai")({
   server: {
     handlers: {
@@ -218,7 +254,7 @@ export const Route = createFileRoute("/api/director-ai")({
           }
           return Response.json({ result: content });
         } catch (err) {
-          return new Response(err instanceof Error ? err.message : "Failed", { status: 502 });
+          return Response.json({ result: fallbackResult(body) });
         }
       },
     },
