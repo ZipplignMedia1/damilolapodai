@@ -375,7 +375,7 @@ function VoiceTab() {
       </SectionCard>
 
       <Button onClick={run} disabled={loading} className="w-full h-12 rounded-xl text-base font-bold">
-        {loading ? <><Loader2 className="h-5 w-5 animate-spin" /> Tuning…</> : <><Mic className="h-5 w-5" /> Generate Voice Prompt</>}
+        {loading ? <><Loader2 className="h-5 w-5 animate-spin" /> Tuning…</> : <><Mic className="h-5 w-5" /> Generate Voice · {cost} DPOD</>}
       </Button>
 
       {result && !result.raw && (
