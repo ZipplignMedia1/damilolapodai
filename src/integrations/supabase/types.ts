@@ -77,6 +77,45 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_transactions: {
+        Row: {
+          amount_kobo: number
+          created_at: string
+          credits: number
+          id: string
+          kind: string
+          metadata: Json
+          paid_at: string | null
+          reference: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount_kobo: number
+          created_at?: string
+          credits: number
+          id?: string
+          kind: string
+          metadata?: Json
+          paid_at?: string | null
+          reference: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount_kobo?: number
+          created_at?: string
+          credits?: number
+          id?: string
+          kind?: string
+          metadata?: Json
+          paid_at?: string | null
+          reference?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -107,11 +146,56 @@ export type Database = {
         }
         Relationships: []
       }
+      subscriptions: {
+        Row: {
+          created_at: string
+          current_period_end: string | null
+          email_token: string | null
+          id: string
+          paystack_customer_code: string | null
+          paystack_subscription_code: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_period_end?: string | null
+          email_token?: string | null
+          id?: string
+          paystack_customer_code?: string | null
+          paystack_subscription_code?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_period_end?: string | null
+          email_token?: string | null
+          id?: string
+          paystack_customer_code?: string | null
+          paystack_subscription_code?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      credit_for_payment: {
+        Args: {
+          _credits: number
+          _kind: string
+          _reference: string
+          _user_id: string
+        }
+        Returns: number
+      }
       spend_credit: {
         Args: { _amount: number; _reason: string }
         Returns: number
