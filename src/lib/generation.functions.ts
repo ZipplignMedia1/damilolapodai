@@ -82,80 +82,50 @@ export const generateVideo = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const cost = data.duration; // 5 or 10 DPOD
     const key = process.env.WAVESPEED_API_KEY;
     if (!key) throw new Error("Server misconfigured: missing WAVESPEED_API_KEY");
 
-    // Spend credits
-    const { data: newBalance, error: spendErr } = await supabase.rpc("spend_credit", {
-      _amount: cost,
-      _reason: "video_generation",
-    });
-    if (spendErr) {
-      if (spendErr.message.includes("INSUFFICIENT_CREDITS")) {
-        throw new Error("INSUFFICIENT_CREDITS");
-      }
-      throw new Error(spendErr.message);
-    }
+    // Video generation is currently FREE (on hold — no credit deduction).
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("credits")
+      .eq("user_id", userId)
+      .maybeSingle();
+    const creditsRemaining = prof?.credits ?? 0;
 
-    let refunded = false;
-    const refund = async () => {
-      if (refunded) return;
-      refunded = true;
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("credits")
-        .eq("user_id", userId)
-        .maybeSingle();
-      const before = prof?.credits ?? 0;
-      const after = before + cost;
-      await supabase.from("profiles").update({ credits: after }).eq("user_id", userId);
-      await supabase.from("credit_transactions").insert({
+    const videoUrl = await callWaveSpeed(
+      data.prompt,
+      data.duration,
+      data.aspectRatio,
+      data.imageDataUrl ?? null,
+      key,
+    );
+
+    const { data: row, error: libErr } = await supabase
+      .from("library_items")
+      .insert({
         user_id: userId,
-        amount: cost,
-        reason: "refund_failed_video_generation",
-        balance_after: after,
-      });
+        kind: "video",
+        prompt: data.prompt,
+        media_url: videoUrl,
+        payload: {
+          aspectRatio: data.aspectRatio,
+          duration: data.duration,
+          mode: data.imageDataUrl ? "image" : "text",
+        },
+      })
+      .select()
+      .single();
+
+    if (libErr) throw new Error(libErr.message);
+
+    return {
+      videoUrl,
+      itemId: row.id,
+      creditsRemaining,
     };
-
-    try {
-      const videoUrl = await callWaveSpeed(
-        data.prompt,
-        data.duration,
-        data.aspectRatio,
-        data.imageDataUrl ?? null,
-        key,
-      );
-
-      // Save to library
-      const { data: row, error: libErr } = await supabase
-        .from("library_items")
-        .insert({
-          user_id: userId,
-          kind: "video",
-          prompt: data.prompt,
-          media_url: videoUrl,
-          payload: {
-            aspectRatio: data.aspectRatio,
-            duration: data.duration,
-            mode: data.imageDataUrl ? "image" : "text",
-          },
-        })
-        .select()
-        .single();
-
-      if (libErr) throw new Error(libErr.message);
-
-      return {
-        videoUrl,
-        itemId: row.id,
-        creditsRemaining: newBalance as number,
-      };
-    } catch (err) {
-      await refund();
-      throw err;
-    }
   });
+
 
 // ─── Image Generation ────────────────────────────────────────────────
 
@@ -221,86 +191,56 @@ export const generateImage = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const cost = 2; // 2 DPOD per image
 
-    // Spend credits
-    const { data: newBalance, error: spendErr } = await supabase.rpc("spend_credit", {
-      _amount: cost,
-      _reason: "image_generation",
-    });
-    if (spendErr) {
-      if (spendErr.message.includes("INSUFFICIENT_CREDITS")) {
-        throw new Error("INSUFFICIENT_CREDITS");
-      }
-      throw new Error(spendErr.message);
+    // Image generation is currently FREE (on hold — no credit deduction).
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("credits")
+      .eq("user_id", userId)
+      .maybeSingle();
+    const creditsRemaining = prof?.credits ?? 0;
+
+    const { w, h } = DIMS[data.aspectRatio];
+    const directive = TYPE_DIRECTIVES[data.type] ?? TYPE_DIRECTIVES.photo;
+    const fullPrompt = [
+      directive,
+      `Subject: ${data.prompt.trim()}.`,
+      "Ultra detailed, high quality, no watermark.",
+    ].join(" ");
+
+    const seed = Math.floor(Math.random() * 1_000_000);
+    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(fullPrompt)}?width=${w}&height=${h}&model=${encodeURIComponent(data.model)}&seed=${seed}&nologo=true&enhance=true`;
+
+    const res = await fetch(url, { method: "GET" });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`Pollinations ${res.status}: ${text.slice(0, 200)}`);
     }
+    const buf = new Uint8Array(await res.arrayBuffer());
+    const mime = res.headers.get("content-type") ?? "image/jpeg";
+    let bin = "";
+    for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+    const b64 = btoa(bin);
+    const dataUrl = `data:${mime};base64,${b64}`;
 
-    let refunded = false;
-    const refund = async () => {
-      if (refunded) return;
-      refunded = true;
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("credits")
-        .eq("user_id", userId)
-        .maybeSingle();
-      const before = prof?.credits ?? 0;
-      const after = before + cost;
-      await supabase.from("profiles").update({ credits: after }).eq("user_id", userId);
-      await supabase.from("credit_transactions").insert({
+    const { data: row, error: libErr } = await supabase
+      .from("library_items")
+      .insert({
         user_id: userId,
-        amount: cost,
-        reason: "refund_failed_image_generation",
-        balance_after: after,
-      });
+        kind: "image",
+        prompt: data.prompt,
+        media_url: dataUrl,
+        payload: { source: "text", aspectRatio: data.aspectRatio, type: data.type, model: data.model },
+      })
+      .select()
+      .single();
+
+    if (libErr) throw new Error(libErr.message);
+
+    return {
+      image: dataUrl,
+      itemId: row.id,
+      creditsRemaining,
     };
-
-    try {
-      const { w, h } = DIMS[data.aspectRatio];
-      const directive = TYPE_DIRECTIVES[data.type] ?? TYPE_DIRECTIVES.photo;
-      const fullPrompt = [
-        directive,
-        `Subject: ${data.prompt.trim()}.`,
-        "Ultra detailed, high quality, no watermark.",
-      ].join(" ");
-
-      const seed = Math.floor(Math.random() * 1_000_000);
-      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(fullPrompt)}?width=${w}&height=${h}&model=${encodeURIComponent(data.model)}&seed=${seed}&nologo=true&enhance=true`;
-
-      const res = await fetch(url, { method: "GET" });
-      if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new Error(`Pollinations ${res.status}: ${text.slice(0, 200)}`);
-      }
-      const buf = new Uint8Array(await res.arrayBuffer());
-      const mime = res.headers.get("content-type") ?? "image/jpeg";
-      let bin = "";
-      for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
-      const b64 = btoa(bin);
-      const dataUrl = `data:${mime};base64,${b64}`;
-
-      // Save to library
-      const { data: row, error: libErr } = await supabase
-        .from("library_items")
-        .insert({
-          user_id: userId,
-          kind: "image",
-          prompt: data.prompt,
-          media_url: dataUrl,
-          payload: { source: "text", aspectRatio: data.aspectRatio, type: data.type, model: data.model },
-        })
-        .select()
-        .single();
-
-      if (libErr) throw new Error(libErr.message);
-
-      return {
-        image: dataUrl,
-        itemId: row.id,
-        creditsRemaining: newBalance as number,
-      };
-    } catch (err) {
-      await refund();
-      throw err;
-    }
   });
+

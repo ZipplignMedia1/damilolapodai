@@ -72,7 +72,7 @@ function ImagePage() {
     setLoading(true);
     setResult(null);
     setOutOfCredits(false);
-    const toastId = toast.loading(`Spending ${cost} DPOD · generating image…`);
+    const toastId = toast.loading(`Generating image…`);
     try {
       const data = await runGenerate({
         data: {
@@ -84,7 +84,7 @@ function ImagePage() {
       });
       setResult(data);
       qc.invalidateQueries({ queryKey: ["my-profile"] });
-      toast.success(`Image ready! ${data.creditsRemaining} DPOD left.`, { id: toastId });
+      toast.success(`Image ready!`, { id: toastId });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Generation failed";
       if (msg.includes("INSUFFICIENT_CREDITS")) {
@@ -200,7 +200,7 @@ function ImagePage() {
         {loading ? (
           <><Loader2 className="h-5 w-5 animate-spin" /> Generating…</>
         ) : (
-          <><Sparkles className="h-5 w-5" /> Generate · {cost} DPOD</>
+          <><Sparkles className="h-5 w-5" /> Generate · Free</>
         )}
       </Button>
 

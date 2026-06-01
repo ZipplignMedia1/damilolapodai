@@ -67,7 +67,7 @@ function VideoPage() {
     setLoading(true);
     setResult(null);
     setOutOfCredits(false);
-    const toastId = toast.loading(`Spending ${cost} DPOD · generating ${duration}s video…`);
+    const toastId = toast.loading(`Generating ${duration}s video…`);
     try {
       const data = await runGenerate({
         data: {
@@ -79,7 +79,7 @@ function VideoPage() {
       });
       setResult(data);
       qc.invalidateQueries({ queryKey: ["my-profile"] });
-      toast.success(`Video ready! ${data.creditsRemaining} DPOD left.`, { id: toastId });
+      toast.success(`Video ready!`, { id: toastId });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Generation failed";
       if (msg.includes("INSUFFICIENT_CREDITS")) {
@@ -141,7 +141,7 @@ function VideoPage() {
                 }`}
               >
                 {d}s
-                <span className="rounded bg-primary-foreground/20 px-1 py-0.5 text-[10px]">{d} DPOD</span>
+                <span className="rounded bg-primary-foreground/20 px-1 py-0.5 text-[10px]">Free</span>
               </button>
             ))}
           </div>
@@ -213,7 +213,7 @@ function VideoPage() {
         {loading ? (
           <><Loader2 className="h-5 w-5 animate-spin" /> Generating {duration}s…</>
         ) : (
-          <><Sparkles className="h-5 w-5" /> Generate · {cost} DPOD</>
+          <><Sparkles className="h-5 w-5" /> Generate · Free</>
         )}
       </Button>
 
