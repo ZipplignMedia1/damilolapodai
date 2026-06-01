@@ -194,7 +194,7 @@ function PromptTab() {
       </SectionCard>
 
       <Button onClick={run} disabled={loading} className="w-full h-12 rounded-xl text-base font-bold">
-        {loading ? <><Loader2 className="h-5 w-5 animate-spin" /> Directing…</> : <><Sparkles className="h-5 w-5" /> Generate Prompt</>}
+        {loading ? <><Loader2 className="h-5 w-5 animate-spin" /> Directing…</> : <><Sparkles className="h-5 w-5" /> Generate Prompt · {cost} DPOD</>}
       </Button>
 
       {result && (
