@@ -67,7 +67,7 @@ function VideoPage() {
     setLoading(true);
     setResult(null);
     setOutOfCredits(false);
-    const toastId = toast.loading(`Generating ${duration}s video…`);
+    const toastId = toast.loading(`Spending ${cost} DPOD · generating ${duration}s video…`);
     try {
       const data = await runGenerate({
         data: {
@@ -79,7 +79,7 @@ function VideoPage() {
       });
       setResult(data);
       qc.invalidateQueries({ queryKey: ["my-profile"] });
-      toast.success(`Video ready!`, { id: toastId });
+      toast.success(`Video ready! ${data.creditsRemaining} DPOD left.`, { id: toastId });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Generation failed";
       if (msg.includes("INSUFFICIENT_CREDITS")) {
@@ -103,18 +103,7 @@ function VideoPage() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm relative overflow-hidden">
-        {/* Coming Soon Overlay */}
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm">
-          <div className="rounded-2xl border border-border bg-card p-6 text-center shadow-lg max-w-xs">
-            <Sparkles className="h-8 w-8 mx-auto mb-3 text-primary opacity-60" />
-            <h3 className="text-lg font-bold">Coming Soon</h3>
-            <p className="mt-1 text-xs text-muted-foreground">
-              We're integrating a new AI video generation API. Stay tuned!
-            </p>
-          </div>
-        </div>
-
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-bold">Video Generation</h2>
@@ -134,7 +123,6 @@ function VideoPage() {
             onChange={(e) => setPrompt(e.target.value)}
             placeholder="e.g. A serene African sunset over the savanna, golden light, elephants walking in the distance, cinematic"
             className="mt-2 min-h-[100px] rounded-xl"
-            disabled
           />
         </div>
 
@@ -146,15 +134,14 @@ function VideoPage() {
               <button
                 key={d}
                 onClick={() => setDuration(d)}
-                disabled
-                className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition opacity-50 ${
+                className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
                   duration === d
                     ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-background text-muted-foreground"
+                    : "border-border bg-background text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {d}s
-                <span className="rounded bg-primary-foreground/20 px-1 py-0.5 text-[10px]">Free</span>
+                <span className="rounded bg-primary-foreground/20 px-1 py-0.5 text-[10px]">{d} DPOD</span>
               </button>
             ))}
           </div>
@@ -168,11 +155,10 @@ function VideoPage() {
               <button
                 key={a.id}
                 onClick={() => setAspect(a.id)}
-                disabled
-                className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition opacity-50 ${
+                className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
                   aspect === a.id
                     ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-background text-muted-foreground"
+                    : "border-border bg-background text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {a.label}
@@ -186,28 +172,88 @@ function VideoPage() {
           <label className="text-sm font-semibold">Starting Frame (optional)</label>
           <p className="mt-0.5 text-[11px] text-muted-foreground">Upload an image to animate from it</p>
           <div className="mt-2 flex items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+            />
             <button
-              disabled
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium opacity-50"
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium hover:bg-accent"
             >
               <ImageIcon className="h-3.5 w-3.5" />
-              Upload image
+              {imageDataUrl ? "Replace image" : "Upload image"}
             </button>
+            {imageDataUrl && (
+              <button
+                onClick={() => setImageDataUrl(null)}
+                className="text-xs text-muted-foreground underline"
+              >
+                Remove
+              </button>
+            )}
           </div>
+          {imageDataUrl && (
+            <img
+              src={imageDataUrl}
+              alt="Starting frame"
+              className="mt-2 max-h-32 rounded-lg border border-border"
+            />
+          )}
         </div>
       </div>
 
       <Button
-        disabled
-        className="w-full h-14 rounded-xl text-base font-bold opacity-60"
+        onClick={handleGenerate}
+        disabled={loading || !prompt.trim()}
+        className="w-full h-14 rounded-xl text-base font-bold"
       >
-        <Sparkles className="h-5 w-5" /> Generate · Coming Soon
+        {loading ? (
+          <>
+            <Loader2 className="h-5 w-5 animate-spin" /> Generating…
+          </>
+        ) : (
+          <>
+            <Sparkles className="h-5 w-5" /> Generate · {cost} DPOD
+          </>
+        )}
       </Button>
 
-      <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-        <Video className="h-6 w-6 mx-auto mb-2 opacity-60" />
-        Video generation is temporarily unavailable while we upgrade our AI provider.
-      </div>
+      {outOfCredits && (
+        <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-sm">
+          <div className="flex items-center gap-2 font-semibold text-destructive">
+            <Coins className="h-4 w-4" /> Out of DPOD
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            You don't have enough DPOD to generate this video.
+          </p>
+          <Link
+            to="/wallet"
+            className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground"
+          >
+            <Wand2 className="h-3.5 w-3.5" /> Top up DPOD
+          </Link>
+        </div>
+      )}
+
+      {result?.videoUrl && (
+        <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
+          <video
+            src={result.videoUrl}
+            controls
+            className="w-full rounded-xl"
+          />
+          <Button
+            onClick={handleDownload}
+            variant="outline"
+            className="mt-3 w-full rounded-xl"
+          >
+            <Download className="h-4 w-4" /> Download
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
