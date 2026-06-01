@@ -205,6 +205,22 @@ function buildFallbackPrompt(idea: string, duration: number, target: TargetModel
   };
 }
 
+function parseJsonOrFallback(content: string, idea: string, duration: number, target: TargetModel) {
+  const cleaned = content
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/```\s*$/i, "")
+    .trim();
+  try {
+    return JSON.parse(cleaned) as unknown;
+  } catch {
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (match) {
+      try { return JSON.parse(match[0]) as unknown; } catch {}
+    }
+    return buildFallbackPrompt(idea, duration, target);
+  }
+}
+
 export const Route = createFileRoute("/api/video-prompt")({
   server: {
     handlers: {
@@ -222,28 +238,10 @@ export const Route = createFileRoute("/api/video-prompt")({
             { role: "user", content: `Idea: ${idea.trim()}\nDuration: ${dur} seconds.\nTarget: ${TARGET_LABEL[tgt]}.\nGenerate the JSON.` },
           ], controller.signal);
           clearTimeout(timeout);
-          const cleaned = content
-            .replace(/^```(?:json)?\s*/i, "")
-            .replace(/```\s*$/i, "")
-            .trim();
-          let parsed: unknown;
-          try {
-            parsed = JSON.parse(cleaned);
-          } catch {
-            const match = cleaned.match(/\{[\s\S]*\}/);
-            if (match) {
-              try { parsed = JSON.parse(match[0]); } catch {}
-            }
-            if (!parsed) {
-              return Response.json(buildFallbackPrompt(idea.trim(), dur, tgt));
-            }
-          }
+          const parsed = parseJsonOrFallback(content, idea.trim(), dur, tgt);
           return Response.json(parsed);
         } catch (err) {
-          if (err instanceof Error && err.name === "AbortError") {
-            return Response.json(buildFallbackPrompt(idea.trim(), dur, tgt));
-          }
-          return new Response(err instanceof Error ? err.message : "Failed", { status: 502 });
+          return Response.json(buildFallbackPrompt(idea.trim(), dur, tgt));
         }
       },
     },
