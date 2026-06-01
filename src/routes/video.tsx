@@ -67,7 +67,7 @@ function VideoPage() {
     setLoading(true);
     setResult(null);
     setOutOfCredits(false);
-    const toastId = toast.loading(`Spending ${cost} DPOD · generating ${duration}s video…`);
+    const toastId = toast.loading(`Generating ${duration}s video…`);
     try {
       const data = await runGenerate({
         data: {
