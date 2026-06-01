@@ -85,45 +85,55 @@ export const generateVideo = createServerFn({ method: "POST" })
     const key = process.env.WAVESPEED_API_KEY;
     if (!key) throw new Error("Server misconfigured: missing WAVESPEED_API_KEY");
 
-    // Video generation is currently FREE (on hold — no credit deduction).
-    const { data: prof } = await supabase
-      .from("profiles")
-      .select("credits")
-      .eq("user_id", userId)
-      .maybeSingle();
-    const creditsRemaining = prof?.credits ?? 0;
+    const cost = data.duration; // 5 or 10 DPOD
+    const { data: newBalance, error: spendErr } = await supabase.rpc("spend_credit", {
+      _amount: cost,
+      _reason: `video:${data.duration}s`,
+    });
+    if (spendErr) throw new Error(spendErr.message);
 
-    const videoUrl = await callWaveSpeed(
-      data.prompt,
-      data.duration,
-      data.aspectRatio,
-      data.imageDataUrl ?? null,
-      key,
-    );
+    try {
+      const videoUrl = await callWaveSpeed(
+        data.prompt,
+        data.duration,
+        data.aspectRatio,
+        data.imageDataUrl ?? null,
+        key,
+      );
 
-    const { data: row, error: libErr } = await supabase
-      .from("library_items")
-      .insert({
-        user_id: userId,
-        kind: "video",
-        prompt: data.prompt,
-        media_url: videoUrl,
-        payload: {
-          aspectRatio: data.aspectRatio,
-          duration: data.duration,
-          mode: data.imageDataUrl ? "image" : "text",
-        },
-      })
-      .select()
-      .single();
+      const { data: row, error: libErr } = await supabase
+        .from("library_items")
+        .insert({
+          user_id: userId,
+          kind: "video",
+          prompt: data.prompt,
+          media_url: videoUrl,
+          payload: {
+            aspectRatio: data.aspectRatio,
+            duration: data.duration,
+            mode: data.imageDataUrl ? "image" : "text",
+          },
+        })
+        .select()
+        .single();
 
-    if (libErr) throw new Error(libErr.message);
+      if (libErr) throw new Error(libErr.message);
 
-    return {
-      videoUrl,
-      itemId: row.id,
-      creditsRemaining,
-    };
+      return {
+        videoUrl,
+        itemId: row.id,
+        creditsRemaining: newBalance ?? 0,
+      };
+    } catch (err) {
+      // Refund credits if generation failed
+      await supabase.rpc("credit_for_payment", {
+        _reference: `refund-${userId}-${Date.now()}`,
+        _user_id: userId,
+        _credits: cost,
+        _kind: "refund:video",
+      }).catch(() => {});
+      throw err;
+    }
   });
 
 
