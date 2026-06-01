@@ -25,15 +25,8 @@ const TARGETS = [
 ] as const;
 type TargetId = typeof TARGETS[number]["id"];
 
-export const Route = createFileRoute("/prompt")({
-  head: () => ({
-    meta: [
-      { title: "JSON Prompt Generator — DAMILOLAPOD AI" },
-      { name: "description", content: "Turn any video idea into a structured shot-by-shot JSON prompt." },
-    ],
-  }),
-  component: PromptPage,
-});
+
+
 
 export const Route = createFileRoute("/prompt")({
   head: () => ({
