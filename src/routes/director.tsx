@@ -311,14 +311,21 @@ function VoiceTab() {
   const [language, setLanguage] = useState("Nigerian English");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<VoiceResult | null>(null);
+  const director = useDirector();
+  const cost = 1;
 
   async function run() {
     if (!character.trim()) return toast.error("Describe the character or voice you want");
     setLoading(true); setResult(null);
+    const toastId = toast.loading(`Spending ${cost} DPOD · tuning voice…`);
     try {
-      const json = await callDirector({ mode: "voice", character, gender, language });
+      const json = await director(cost, "director:voice", { mode: "voice", character, gender, language });
       setResult(json.result as VoiceResult);
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+      toast.success(`Done! ${json.creditsRemaining} DPOD left.`, { id: toastId });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed";
+      toast.error(msg.includes("INSUFFICIENT_CREDITS") ? "Not enough DPOD" : msg, { id: toastId });
+    }
     finally { setLoading(false); }
   }
 
