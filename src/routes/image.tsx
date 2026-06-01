@@ -200,7 +200,7 @@ function ImagePage() {
         {loading ? (
           <><Loader2 className="h-5 w-5 animate-spin" /> Generating…</>
         ) : (
-          <><Sparkles className="h-5 w-5" /> Generate · {cost} DPOD</>
+          <><Sparkles className="h-5 w-5" /> Generate · Free</>
         )}
       </Button>
 
