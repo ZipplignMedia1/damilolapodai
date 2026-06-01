@@ -494,7 +494,7 @@ function AnalyzeTab() {
       </SectionCard>
 
       <Button onClick={run} disabled={loading} className="w-full h-12 rounded-xl text-base font-bold">
-        {loading ? <><Loader2 className="h-5 w-5 animate-spin" /> Analyzing…</> : <><ShieldCheck className="h-5 w-5" /> Analyze Prompt</>}
+        {loading ? <><Loader2 className="h-5 w-5 animate-spin" /> Analyzing…</> : <><ShieldCheck className="h-5 w-5" /> Analyze · {cost} DPOD</>}
       </Button>
 
       {result && !result.raw && (
