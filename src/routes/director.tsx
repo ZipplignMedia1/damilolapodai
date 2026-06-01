@@ -143,14 +143,23 @@ function PromptTab() {
   const [duration, setDuration] = useState(10);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const director = useDirector();
+
+  const isImage = format === "image";
+  const cost = isImage ? 1 : duration; // image prompt = 1 DPOD, video prompt = duration DPOD
 
   async function run() {
     if (!desc.trim()) return toast.error("Describe your shot first");
     setLoading(true); setResult(null);
+    const toastId = toast.loading(`Spending ${cost} DPOD · directing…`);
     try {
-      const json = await callDirector({ mode: "expand", description: desc, format, tone, duration });
+      const json = await director(cost, `director:prompt:${format}`, { mode: "expand", description: desc, format, tone, duration });
       setResult(typeof json.result === "string" ? json.result : JSON.stringify(json.result));
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+      toast.success(`Done! ${json.creditsRemaining} DPOD left.`, { id: toastId });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed";
+      toast.error(msg.includes("INSUFFICIENT_CREDITS") ? "Not enough DPOD" : msg, { id: toastId });
+    }
     finally { setLoading(false); }
   }
 
