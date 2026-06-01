@@ -54,13 +54,14 @@ export function CreditBadge() {
 
   return (
     <div className="flex items-center gap-2">
-      <div
-        title={`${credits} credits remaining`}
-        className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1.5 text-xs font-bold"
+      <Link
+        to="/topup"
+        title={`${credits} DPOD — tap to top up`}
+        className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1.5 text-xs font-bold hover:bg-accent"
       >
         <Coins className="h-3.5 w-3.5 text-primary" />
         <span>{credits}</span>
-      </div>
+      </Link>
       <DropdownMenu>
         <DropdownMenuTrigger className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold shadow-sm">
           {profile?.avatar_url ? (
@@ -76,10 +77,13 @@ export function CreditBadge() {
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem disabled className="text-xs">
-            <Coins className="h-3.5 w-3.5 mr-2" /> {credits} credits
+            <Coins className="h-3.5 w-3.5 mr-2" /> {credits} DPOD
           </DropdownMenuItem>
-          <DropdownMenuItem disabled className="text-xs">
-            <User className="h-3.5 w-3.5 mr-2" /> Top-ups coming soon
+          <DropdownMenuItem asChild className="text-xs">
+            <Link to="/topup"><Coins className="h-3.5 w-3.5 mr-2" /> Buy DPOD</Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild className="text-xs">
+            <Link to="/profile"><User className="h-3.5 w-3.5 mr-2" /> Profile</Link>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
