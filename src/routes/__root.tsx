@@ -11,6 +11,7 @@ import {
 import { Home, Library, Plus, User } from "lucide-react";
 import { Toaster } from "@/components/ui/sonner";
 import { CreditBadge } from "@/components/CreditBadge";
+import { LoadingBar } from "@/components/LoadingBar";
 import avatar from "@/assets/welcome-avatar.jpg";
 import appCss from "../styles.css?url";
 
@@ -139,6 +140,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <div className="relative min-h-screen bg-background">
+        <LoadingBar />
         <div className="relative">
           {!isChromeHidden && <Header />}
           <main className={isChromeHidden ? "" : "mx-auto max-w-screen-md px-4 pt-2 pb-28"}>

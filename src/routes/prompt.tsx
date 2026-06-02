@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { spendCredits, refundCredits } from "@/lib/credits.functions";
+import { runJsonPrompt } from "@/lib/ai.functions";
+import { useLoadingTask } from "@/components/LoadingBar";
 
 const TARGETS = [
   { id: "universal", label: "Universal (any model)" },
@@ -24,9 +25,6 @@ const TARGETS = [
   { id: "wan", label: "Alibaba Wan 2" },
 ] as const;
 type TargetId = typeof TARGETS[number]["id"];
-
-
-
 
 export const Route = createFileRoute("/prompt")({
   head: () => ({
@@ -53,48 +51,32 @@ function PromptPage() {
   const [copied, setCopied] = useState(false);
   const [outOfCredits, setOutOfCredits] = useState(false);
   const qc = useQueryClient();
-  const runSpend = useServerFn(spendCredits);
-  const runRefund = useServerFn(refundCredits);
+  const runGenerate = useServerFn(runJsonPrompt);
+  const withLoading = useLoadingTask();
 
-  const cost = duration; // 1 DPOD per second of generated plan
+  const cost = duration; // 1 DPOD per second
 
   async function generate() {
     if (!idea.trim()) return toast.error("Describe your video idea");
     setLoading(true);
     setResult(null);
     setOutOfCredits(false);
-    const toastId = toast.loading(`Spending ${cost} DPOD · generating JSON…`);
+    const toastId = toast.loading(`Generating JSON · ${cost} DPOD on success…`);
 
-    // 1. Spend credits first
-    let spent = false;
     try {
-      const spend = await runSpend({ data: { amount: cost, reason: `json_prompt:${duration}s` } });
-      spent = true;
-      // 2. Call generation
-      const res = await fetch("/api/video-prompt", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idea, duration, target }),
-      });
-      if (!res.ok) throw new Error((await res.text()) || `Failed (${res.status})`);
-      const json = await res.json();
-      setResult(JSON.stringify(json, null, 2));
+      const data = await withLoading(() =>
+        runGenerate({ data: { idea: idea.trim(), duration, target } }),
+      );
+      setResult(JSON.stringify(JSON.parse(data.resultJsonString), null, 2));
       qc.invalidateQueries({ queryKey: ["my-profile"] });
-      toast.success(`JSON ready! ${spend.creditsRemaining} DPOD left.`, { id: toastId });
+      toast.success(`JSON ready! ${data.creditsRemaining} DPOD left.`, { id: toastId });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed";
       if (msg.includes("INSUFFICIENT_CREDITS")) {
         setOutOfCredits(true);
         toast.error("Not enough DPOD", { id: toastId });
       } else {
-        // Refund the spend if generation failed
-        if (spent) {
-          try {
-            await runRefund({ data: { amount: cost, reason: `refund:json_prompt` } });
-            qc.invalidateQueries({ queryKey: ["my-profile"] });
-          } catch {}
-        }
-        toast.error(msg, { id: toastId });
+        toast.error(`${msg} (no DPOD charged)`, { id: toastId });
       }
     } finally {
       setLoading(false);
@@ -115,7 +97,7 @@ function PromptPage() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-bold">JSON Prompt Generator</h2>
-            <p className="mt-1 text-xs text-muted-foreground">Describe any video — get a shot-by-shot JSON plan.</p>
+            <p className="mt-1 text-xs text-muted-foreground">Describe any video — get a shot-by-shot JSON plan that follows YOUR idea.</p>
           </div>
           <div className="flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1.5 text-xs font-medium text-primary">
             <Code2 className="h-3.5 w-3.5" /> JSON
@@ -127,9 +109,12 @@ function PromptPage() {
           <Textarea
             value={idea}
             onChange={(e) => setIdea(e.target.value)}
-            placeholder="e.g. A couple argues, then Pepsi instantly changes the mood. Modern living room, bright and refreshing."
+            placeholder="e.g. Two friends having a heated street fight in Lagos at night, rain falling, cinematic."
             className="mt-2 min-h-[120px] rounded-xl"
           />
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            The director follows your exact vibe — fight scene, romance, drama. It won't turn it into an advert unless you ask.
+          </p>
         </div>
 
         <div className="mt-4">
@@ -144,7 +129,6 @@ function PromptPage() {
               ))}
             </SelectContent>
           </Select>
-          <p className="mt-1.5 text-[11px] text-muted-foreground">JSON will be tailored to the selected model's prompt format.</p>
         </div>
 
         <div className="mt-4">
