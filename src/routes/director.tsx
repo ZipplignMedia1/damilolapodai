@@ -158,14 +158,14 @@ function PromptTab() {
   async function run() {
     if (!desc.trim()) return toast.error("Describe your shot first");
     setLoading(true); setResult(null);
-    const toastId = toast.loading(`Spending ${cost} DPOD · directing…`);
+    const toastId = toast.loading(`Directing · ${cost} DPOD on success…`);
     try {
-      const json = await director(cost, `director:prompt:${format}`, { mode: "expand", description: desc, format, tone, duration });
-      setResult(typeof json.result === "string" ? json.result : JSON.stringify(json.result));
-      toast.success(`Done! ${json.creditsRemaining} DPOD left.`, { id: toastId });
+      const out = await director(cost, `director:prompt:${format}`, { mode: "expand", description: desc, format, tone, duration });
+      setResult(out.text ?? (out.json ? JSON.stringify(out.json) : ""));
+      toast.success(`Done! ${out.creditsRemaining} DPOD left.`, { id: toastId });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed";
-      toast.error(msg.includes("INSUFFICIENT_CREDITS") ? "Not enough DPOD" : msg, { id: toastId });
+      toast.error(msg.includes("INSUFFICIENT_CREDITS") ? "Not enough DPOD" : `${msg} (no DPOD charged)`, { id: toastId });
     }
     finally { setLoading(false); }
   }
@@ -232,14 +232,14 @@ function StoryTab() {
   async function run() {
     if (!idea.trim()) return toast.error("Give me a small idea to grow");
     setLoading(true); setResult(null);
-    const toastId = toast.loading(`Spending ${cost} DPOD · writing story…`);
+    const toastId = toast.loading(`Writing story · ${cost} DPOD on success…`);
     try {
-      const json = await director(cost, `director:story:${length}`, { mode: "story", idea, genre, tone, length });
-      setResult(typeof json.result === "string" ? json.result : JSON.stringify(json.result));
-      toast.success(`Done! ${json.creditsRemaining} DPOD left.`, { id: toastId });
+      const out = await director(cost, `director:story:${length}`, { mode: "story", idea, genre, tone, length });
+      setResult(out.text ?? "");
+      toast.success(`Done! ${out.creditsRemaining} DPOD left.`, { id: toastId });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed";
-      toast.error(msg.includes("INSUFFICIENT_CREDITS") ? "Not enough DPOD" : msg, { id: toastId });
+      toast.error(msg.includes("INSUFFICIENT_CREDITS") ? "Not enough DPOD" : `${msg} (no DPOD charged)`, { id: toastId });
     }
     finally { setLoading(false); }
   }
@@ -324,14 +324,14 @@ function VoiceTab() {
   async function run() {
     if (!character.trim()) return toast.error("Describe the character or voice you want");
     setLoading(true); setResult(null);
-    const toastId = toast.loading(`Spending ${cost} DPOD · tuning voice…`);
+    const toastId = toast.loading(`Tuning voice · ${cost} DPOD on success…`);
     try {
-      const json = await director(cost, "director:voice", { mode: "voice", character, gender, language });
-      setResult(json.result as VoiceResult);
-      toast.success(`Done! ${json.creditsRemaining} DPOD left.`, { id: toastId });
+      const out = await director(cost, "director:voice", { mode: "voice", character, gender, language });
+      setResult((out.json as VoiceResult) ?? null);
+      toast.success(`Done! ${out.creditsRemaining} DPOD left.`, { id: toastId });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed";
-      toast.error(msg.includes("INSUFFICIENT_CREDITS") ? "Not enough DPOD" : msg, { id: toastId });
+      toast.error(msg.includes("INSUFFICIENT_CREDITS") ? "Not enough DPOD" : `${msg} (no DPOD charged)`, { id: toastId });
     }
     finally { setLoading(false); }
   }
@@ -463,14 +463,14 @@ function AnalyzeTab() {
   async function run() {
     if (!prompt.trim()) return toast.error("Paste a prompt to analyze");
     setLoading(true); setResult(null);
-    const toastId = toast.loading(`Spending ${cost} DPOD · analyzing…`);
+    const toastId = toast.loading(`Analyzing · ${cost} DPOD on success…`);
     try {
-      const json = await director(cost, "director:analyze", { mode: "analyze", prompt, target });
-      setResult(json.result as AnalyzeResult);
-      toast.success(`Done! ${json.creditsRemaining} DPOD left.`, { id: toastId });
+      const out = await director(cost, "director:analyze", { mode: "analyze", prompt, target });
+      setResult((out.json as AnalyzeResult) ?? null);
+      toast.success(`Done! ${out.creditsRemaining} DPOD left.`, { id: toastId });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed";
-      toast.error(msg.includes("INSUFFICIENT_CREDITS") ? "Not enough DPOD" : msg, { id: toastId });
+      toast.error(msg.includes("INSUFFICIENT_CREDITS") ? "Not enough DPOD" : `${msg} (no DPOD charged)`, { id: toastId });
     }
     finally { setLoading(false); }
   }
