@@ -172,7 +172,7 @@ function PromptTab() {
 
   return (
     <>
-      <SectionCard title="Prompt Director" subtitle="Rough idea in → cinema-grade prompt out.">
+      <SectionCard title="Trained Director" subtitle="Pick your format — movie, skit, playlet, ad — and get a prompt tuned for THAT format, not generic filler.">
         <div>
           <label className="text-sm font-semibold">Your shot or scene</label>
           <Textarea value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="e.g. A mother confronts her son in the kitchen about missing school fees." className="mt-2 min-h-[120px] rounded-xl" />
