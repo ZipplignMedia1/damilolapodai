@@ -20,7 +20,6 @@ import { Route as HomeRouteImport } from './routes/home'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as DirectorRouteImport } from './routes/director'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ApiVideoPromptRouteImport } from './routes/api/video-prompt'
 import { Route as ApiVerifyGeminiRouteImport } from './routes/api/verify-gemini'
 import { Route as ApiTransformImageRouteImport } from './routes/api/transform-image'
 import { Route as ApiStoryboardSceneRouteImport } from './routes/api/storyboard-scene'
@@ -28,7 +27,6 @@ import { Route as ApiKeyframesRouteImport } from './routes/api/keyframes'
 import { Route as ApiGenerateVideoRouteImport } from './routes/api/generate-video'
 import { Route as ApiGenerateImageRouteImport } from './routes/api/generate-image'
 import { Route as ApiExpandPromptRouteImport } from './routes/api/expand-prompt'
-import { Route as ApiDirectorAiRouteImport } from './routes/api/director-ai'
 import { Route as ApiPublicPaystackWebhookRouteImport } from './routes/api/public/paystack-webhook'
 
 const VideoRoute = VideoRouteImport.update({
@@ -86,11 +84,6 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiVideoPromptRoute = ApiVideoPromptRouteImport.update({
-  id: '/api/video-prompt',
-  path: '/api/video-prompt',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiVerifyGeminiRoute = ApiVerifyGeminiRouteImport.update({
   id: '/api/verify-gemini',
   path: '/api/verify-gemini',
@@ -126,11 +119,6 @@ const ApiExpandPromptRoute = ApiExpandPromptRouteImport.update({
   path: '/api/expand-prompt',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiDirectorAiRoute = ApiDirectorAiRouteImport.update({
-  id: '/api/director-ai',
-  path: '/api/director-ai',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiPublicPaystackWebhookRoute =
   ApiPublicPaystackWebhookRouteImport.update({
     id: '/api/public/paystack-webhook',
@@ -150,7 +138,6 @@ export interface FileRoutesByFullPath {
   '/storyboard': typeof StoryboardRoute
   '/topup': typeof TopupRoute
   '/video': typeof VideoRoute
-  '/api/director-ai': typeof ApiDirectorAiRoute
   '/api/expand-prompt': typeof ApiExpandPromptRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/generate-video': typeof ApiGenerateVideoRoute
@@ -158,7 +145,6 @@ export interface FileRoutesByFullPath {
   '/api/storyboard-scene': typeof ApiStoryboardSceneRoute
   '/api/transform-image': typeof ApiTransformImageRoute
   '/api/verify-gemini': typeof ApiVerifyGeminiRoute
-  '/api/video-prompt': typeof ApiVideoPromptRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
 }
 export interface FileRoutesByTo {
@@ -173,7 +159,6 @@ export interface FileRoutesByTo {
   '/storyboard': typeof StoryboardRoute
   '/topup': typeof TopupRoute
   '/video': typeof VideoRoute
-  '/api/director-ai': typeof ApiDirectorAiRoute
   '/api/expand-prompt': typeof ApiExpandPromptRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/generate-video': typeof ApiGenerateVideoRoute
@@ -181,7 +166,6 @@ export interface FileRoutesByTo {
   '/api/storyboard-scene': typeof ApiStoryboardSceneRoute
   '/api/transform-image': typeof ApiTransformImageRoute
   '/api/verify-gemini': typeof ApiVerifyGeminiRoute
-  '/api/video-prompt': typeof ApiVideoPromptRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
 }
 export interface FileRoutesById {
@@ -197,7 +181,6 @@ export interface FileRoutesById {
   '/storyboard': typeof StoryboardRoute
   '/topup': typeof TopupRoute
   '/video': typeof VideoRoute
-  '/api/director-ai': typeof ApiDirectorAiRoute
   '/api/expand-prompt': typeof ApiExpandPromptRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/generate-video': typeof ApiGenerateVideoRoute
@@ -205,7 +188,6 @@ export interface FileRoutesById {
   '/api/storyboard-scene': typeof ApiStoryboardSceneRoute
   '/api/transform-image': typeof ApiTransformImageRoute
   '/api/verify-gemini': typeof ApiVerifyGeminiRoute
-  '/api/video-prompt': typeof ApiVideoPromptRoute
   '/api/public/paystack-webhook': typeof ApiPublicPaystackWebhookRoute
 }
 export interface FileRouteTypes {
@@ -222,7 +204,6 @@ export interface FileRouteTypes {
     | '/storyboard'
     | '/topup'
     | '/video'
-    | '/api/director-ai'
     | '/api/expand-prompt'
     | '/api/generate-image'
     | '/api/generate-video'
@@ -230,7 +211,6 @@ export interface FileRouteTypes {
     | '/api/storyboard-scene'
     | '/api/transform-image'
     | '/api/verify-gemini'
-    | '/api/video-prompt'
     | '/api/public/paystack-webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -245,7 +225,6 @@ export interface FileRouteTypes {
     | '/storyboard'
     | '/topup'
     | '/video'
-    | '/api/director-ai'
     | '/api/expand-prompt'
     | '/api/generate-image'
     | '/api/generate-video'
@@ -253,7 +232,6 @@ export interface FileRouteTypes {
     | '/api/storyboard-scene'
     | '/api/transform-image'
     | '/api/verify-gemini'
-    | '/api/video-prompt'
     | '/api/public/paystack-webhook'
   id:
     | '__root__'
@@ -268,7 +246,6 @@ export interface FileRouteTypes {
     | '/storyboard'
     | '/topup'
     | '/video'
-    | '/api/director-ai'
     | '/api/expand-prompt'
     | '/api/generate-image'
     | '/api/generate-video'
@@ -276,7 +253,6 @@ export interface FileRouteTypes {
     | '/api/storyboard-scene'
     | '/api/transform-image'
     | '/api/verify-gemini'
-    | '/api/video-prompt'
     | '/api/public/paystack-webhook'
   fileRoutesById: FileRoutesById
 }
@@ -292,7 +268,6 @@ export interface RootRouteChildren {
   StoryboardRoute: typeof StoryboardRoute
   TopupRoute: typeof TopupRoute
   VideoRoute: typeof VideoRoute
-  ApiDirectorAiRoute: typeof ApiDirectorAiRoute
   ApiExpandPromptRoute: typeof ApiExpandPromptRoute
   ApiGenerateImageRoute: typeof ApiGenerateImageRoute
   ApiGenerateVideoRoute: typeof ApiGenerateVideoRoute
@@ -300,7 +275,6 @@ export interface RootRouteChildren {
   ApiStoryboardSceneRoute: typeof ApiStoryboardSceneRoute
   ApiTransformImageRoute: typeof ApiTransformImageRoute
   ApiVerifyGeminiRoute: typeof ApiVerifyGeminiRoute
-  ApiVideoPromptRoute: typeof ApiVideoPromptRoute
   ApiPublicPaystackWebhookRoute: typeof ApiPublicPaystackWebhookRoute
 }
 
@@ -383,13 +357,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/video-prompt': {
-      id: '/api/video-prompt'
-      path: '/api/video-prompt'
-      fullPath: '/api/video-prompt'
-      preLoaderRoute: typeof ApiVideoPromptRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/verify-gemini': {
       id: '/api/verify-gemini'
       path: '/api/verify-gemini'
@@ -439,13 +406,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiExpandPromptRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/director-ai': {
-      id: '/api/director-ai'
-      path: '/api/director-ai'
-      fullPath: '/api/director-ai'
-      preLoaderRoute: typeof ApiDirectorAiRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/public/paystack-webhook': {
       id: '/api/public/paystack-webhook'
       path: '/api/public/paystack-webhook'
@@ -468,7 +428,6 @@ const rootRouteChildren: RootRouteChildren = {
   StoryboardRoute: StoryboardRoute,
   TopupRoute: TopupRoute,
   VideoRoute: VideoRoute,
-  ApiDirectorAiRoute: ApiDirectorAiRoute,
   ApiExpandPromptRoute: ApiExpandPromptRoute,
   ApiGenerateImageRoute: ApiGenerateImageRoute,
   ApiGenerateVideoRoute: ApiGenerateVideoRoute,
@@ -476,9 +435,18 @@ const rootRouteChildren: RootRouteChildren = {
   ApiStoryboardSceneRoute: ApiStoryboardSceneRoute,
   ApiTransformImageRoute: ApiTransformImageRoute,
   ApiVerifyGeminiRoute: ApiVerifyGeminiRoute,
-  ApiVideoPromptRoute: ApiVideoPromptRoute,
   ApiPublicPaystackWebhookRoute: ApiPublicPaystackWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
