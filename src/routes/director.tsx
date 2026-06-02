@@ -9,14 +9,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { spendCredits, refundCredits } from "@/lib/credits.functions";
+import { runDirector } from "@/lib/ai.functions";
+import { useLoadingTask } from "@/components/LoadingBar";
 
 type Tab = "prompt" | "story" | "voice" | "analyze";
 
 const FORMATS = [
-  { id: "drama", label: "Nollywood Drama" },
   { id: "movie", label: "Cinematic Movie" },
+  { id: "drama", label: "Nollywood Drama" },
   { id: "skit", label: "Comedy Skit (IG/TikTok)" },
+  { id: "playlet", label: "Playlet (stage-style)" },
   { id: "music_video", label: "Music Video" },
   { id: "commercial", label: "Commercial / Ad" },
   { id: "image", label: "Single Image" },
@@ -76,32 +78,37 @@ function DirectorPage() {
 
 function useDirector() {
   const qc = useQueryClient();
-  const runSpend = useServerFn(spendCredits);
-  const runRefund = useServerFn(refundCredits);
+  const runFn = useServerFn(runDirector);
+  const withLoading = useLoadingTask();
 
   return async function run(
     cost: number,
     reason: string,
-    body: Record<string, unknown>,
-  ): Promise<{ result: unknown; creditsRemaining: number }> {
-    const spend = await runSpend({ data: { amount: cost, reason } });
-    try {
-      const res = await fetch("/api/director-ai", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error((await res.text()) || `Failed (${res.status})`);
-      const json = (await res.json()) as { result: unknown };
-      qc.invalidateQueries({ queryKey: ["my-profile"] });
-      return { result: json.result, creditsRemaining: spend.creditsRemaining };
-    } catch (err) {
-      try {
-        await runRefund({ data: { amount: cost, reason: `refund:${reason}` } });
-        qc.invalidateQueries({ queryKey: ["my-profile"] });
-      } catch {}
-      throw err;
-    }
+    body: {
+      mode: "expand" | "story" | "voice" | "analyze";
+      description?: string;
+      format?: string;
+      tone?: string;
+      duration?: number;
+      idea?: string;
+      genre?: string;
+      length?: "short" | "medium" | "long";
+      character?: string;
+      gender?: "male" | "female" | "neutral";
+      language?: string;
+      prompt?: string;
+      target?: string;
+    },
+  ): Promise<{ text: string | null; json: unknown | null; creditsRemaining: number }> {
+    const data = await withLoading(() =>
+      runFn({ data: { ...body, cost, reason } }),
+    );
+    qc.invalidateQueries({ queryKey: ["my-profile"] });
+    return {
+      text: data.resultText,
+      json: data.resultJsonString ? JSON.parse(data.resultJsonString) : null,
+      creditsRemaining: data.creditsRemaining,
+    };
   };
 }
 
@@ -151,21 +158,21 @@ function PromptTab() {
   async function run() {
     if (!desc.trim()) return toast.error("Describe your shot first");
     setLoading(true); setResult(null);
-    const toastId = toast.loading(`Spending ${cost} DPOD · directing…`);
+    const toastId = toast.loading(`Directing · ${cost} DPOD on success…`);
     try {
-      const json = await director(cost, `director:prompt:${format}`, { mode: "expand", description: desc, format, tone, duration });
-      setResult(typeof json.result === "string" ? json.result : JSON.stringify(json.result));
-      toast.success(`Done! ${json.creditsRemaining} DPOD left.`, { id: toastId });
+      const out = await director(cost, `director:prompt:${format}`, { mode: "expand", description: desc, format, tone, duration });
+      setResult(out.text ?? (out.json ? JSON.stringify(out.json) : ""));
+      toast.success(`Done! ${out.creditsRemaining} DPOD left.`, { id: toastId });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed";
-      toast.error(msg.includes("INSUFFICIENT_CREDITS") ? "Not enough DPOD" : msg, { id: toastId });
+      toast.error(msg.includes("INSUFFICIENT_CREDITS") ? "Not enough DPOD" : `${msg} (no DPOD charged)`, { id: toastId });
     }
     finally { setLoading(false); }
   }
 
   return (
     <>
-      <SectionCard title="Prompt Director" subtitle="Rough idea in → cinema-grade prompt out.">
+      <SectionCard title="Trained Director" subtitle="Pick your format — movie, skit, playlet, ad — and get a prompt tuned for THAT format, not generic filler.">
         <div>
           <label className="text-sm font-semibold">Your shot or scene</label>
           <Textarea value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="e.g. A mother confronts her son in the kitchen about missing school fees." className="mt-2 min-h-[120px] rounded-xl" />
@@ -225,14 +232,14 @@ function StoryTab() {
   async function run() {
     if (!idea.trim()) return toast.error("Give me a small idea to grow");
     setLoading(true); setResult(null);
-    const toastId = toast.loading(`Spending ${cost} DPOD · writing story…`);
+    const toastId = toast.loading(`Writing story · ${cost} DPOD on success…`);
     try {
-      const json = await director(cost, `director:story:${length}`, { mode: "story", idea, genre, tone, length });
-      setResult(typeof json.result === "string" ? json.result : JSON.stringify(json.result));
-      toast.success(`Done! ${json.creditsRemaining} DPOD left.`, { id: toastId });
+      const out = await director(cost, `director:story:${length}`, { mode: "story", idea, genre, tone, length });
+      setResult(out.text ?? "");
+      toast.success(`Done! ${out.creditsRemaining} DPOD left.`, { id: toastId });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed";
-      toast.error(msg.includes("INSUFFICIENT_CREDITS") ? "Not enough DPOD" : msg, { id: toastId });
+      toast.error(msg.includes("INSUFFICIENT_CREDITS") ? "Not enough DPOD" : `${msg} (no DPOD charged)`, { id: toastId });
     }
     finally { setLoading(false); }
   }
@@ -317,14 +324,14 @@ function VoiceTab() {
   async function run() {
     if (!character.trim()) return toast.error("Describe the character or voice you want");
     setLoading(true); setResult(null);
-    const toastId = toast.loading(`Spending ${cost} DPOD · tuning voice…`);
+    const toastId = toast.loading(`Tuning voice · ${cost} DPOD on success…`);
     try {
-      const json = await director(cost, "director:voice", { mode: "voice", character, gender, language });
-      setResult(json.result as VoiceResult);
-      toast.success(`Done! ${json.creditsRemaining} DPOD left.`, { id: toastId });
+      const out = await director(cost, "director:voice", { mode: "voice", character, gender, language });
+      setResult((out.json as VoiceResult) ?? null);
+      toast.success(`Done! ${out.creditsRemaining} DPOD left.`, { id: toastId });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed";
-      toast.error(msg.includes("INSUFFICIENT_CREDITS") ? "Not enough DPOD" : msg, { id: toastId });
+      toast.error(msg.includes("INSUFFICIENT_CREDITS") ? "Not enough DPOD" : `${msg} (no DPOD charged)`, { id: toastId });
     }
     finally { setLoading(false); }
   }
@@ -456,14 +463,14 @@ function AnalyzeTab() {
   async function run() {
     if (!prompt.trim()) return toast.error("Paste a prompt to analyze");
     setLoading(true); setResult(null);
-    const toastId = toast.loading(`Spending ${cost} DPOD · analyzing…`);
+    const toastId = toast.loading(`Analyzing · ${cost} DPOD on success…`);
     try {
-      const json = await director(cost, "director:analyze", { mode: "analyze", prompt, target });
-      setResult(json.result as AnalyzeResult);
-      toast.success(`Done! ${json.creditsRemaining} DPOD left.`, { id: toastId });
+      const out = await director(cost, "director:analyze", { mode: "analyze", prompt, target });
+      setResult((out.json as AnalyzeResult) ?? null);
+      toast.success(`Done! ${out.creditsRemaining} DPOD left.`, { id: toastId });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed";
-      toast.error(msg.includes("INSUFFICIENT_CREDITS") ? "Not enough DPOD" : msg, { id: toastId });
+      toast.error(msg.includes("INSUFFICIENT_CREDITS") ? "Not enough DPOD" : `${msg} (no DPOD charged)`, { id: toastId });
     }
     finally { setLoading(false); }
   }
