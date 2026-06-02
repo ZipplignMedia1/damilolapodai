@@ -205,7 +205,7 @@ export const runJsonPrompt = createServerFn({ method: "POST" })
       throw new Error(spendErr.message);
     }
 
-    return { result: parsed as Record<string, unknown>, creditsRemaining: (newBalance as number) ?? 0 };
+    return { resultJsonString: JSON.stringify(parsed), creditsRemaining: (newBalance as number) ?? 0 };
   });
 
 // ───────── Director (Prompt / Story / Voice / Analyze) ─────────
@@ -377,7 +377,6 @@ export const runDirector = createServerFn({ method: "POST" })
     const { system, user, json } = directorSystem(data);
     if (!user) throw new Error("Input required");
 
-    // 1. Generate FIRST
     const raw = await runAI(
       [
         { role: "system", content: system },
@@ -387,17 +386,16 @@ export const runDirector = createServerFn({ method: "POST" })
     );
     const trimmed = cleanJsonText(raw);
     let resultText: string | null = null;
-    let resultJson: Record<string, unknown> | null = null;
+    let resultJsonString: string | null = null;
     if (json) {
       const parsed = tryParseJson(trimmed);
       if (!parsed) throw new Error("AI returned invalid JSON — no DPOD charged. Try again.");
-      resultJson = parsed as Record<string, unknown>;
+      resultJsonString = JSON.stringify(parsed);
     } else {
       if (!trimmed) throw new Error("AI returned empty response — no DPOD charged. Try again.");
       resultText = trimmed;
     }
 
-    // 2. Spend credits only on success
     const { data: newBalance, error: spendErr } = await supabase.rpc("spend_credit", {
       _amount: data.cost,
       _reason: data.reason,
@@ -407,9 +405,5 @@ export const runDirector = createServerFn({ method: "POST" })
       throw new Error(spendErr.message);
     }
 
-    return {
-      resultText,
-      resultJson,
-      creditsRemaining: (newBalance as number) ?? 0,
-    };
+    return { resultText, resultJsonString, creditsRemaining: (newBalance as number) ?? 0 };
   });
