@@ -9,14 +9,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { spendCredits, refundCredits } from "@/lib/credits.functions";
+import { runDirector } from "@/lib/ai.functions";
+import { useLoadingTask } from "@/components/LoadingBar";
 
 type Tab = "prompt" | "story" | "voice" | "analyze";
 
 const FORMATS = [
-  { id: "drama", label: "Nollywood Drama" },
   { id: "movie", label: "Cinematic Movie" },
+  { id: "drama", label: "Nollywood Drama" },
   { id: "skit", label: "Comedy Skit (IG/TikTok)" },
+  { id: "playlet", label: "Playlet (stage-style)" },
   { id: "music_video", label: "Music Video" },
   { id: "commercial", label: "Commercial / Ad" },
   { id: "image", label: "Single Image" },
@@ -76,32 +78,37 @@ function DirectorPage() {
 
 function useDirector() {
   const qc = useQueryClient();
-  const runSpend = useServerFn(spendCredits);
-  const runRefund = useServerFn(refundCredits);
+  const runFn = useServerFn(runDirector);
+  const withLoading = useLoadingTask();
 
   return async function run(
     cost: number,
     reason: string,
-    body: Record<string, unknown>,
-  ): Promise<{ result: unknown; creditsRemaining: number }> {
-    const spend = await runSpend({ data: { amount: cost, reason } });
-    try {
-      const res = await fetch("/api/director-ai", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error((await res.text()) || `Failed (${res.status})`);
-      const json = (await res.json()) as { result: unknown };
-      qc.invalidateQueries({ queryKey: ["my-profile"] });
-      return { result: json.result, creditsRemaining: spend.creditsRemaining };
-    } catch (err) {
-      try {
-        await runRefund({ data: { amount: cost, reason: `refund:${reason}` } });
-        qc.invalidateQueries({ queryKey: ["my-profile"] });
-      } catch {}
-      throw err;
-    }
+    body: {
+      mode: "expand" | "story" | "voice" | "analyze";
+      description?: string;
+      format?: string;
+      tone?: string;
+      duration?: number;
+      idea?: string;
+      genre?: string;
+      length?: "short" | "medium" | "long";
+      character?: string;
+      gender?: "male" | "female" | "neutral";
+      language?: string;
+      prompt?: string;
+      target?: string;
+    },
+  ): Promise<{ text: string | null; json: unknown | null; creditsRemaining: number }> {
+    const data = await withLoading(() =>
+      runFn({ data: { ...body, cost, reason } }),
+    );
+    qc.invalidateQueries({ queryKey: ["my-profile"] });
+    return {
+      text: data.resultText,
+      json: data.resultJsonString ? JSON.parse(data.resultJsonString) : null,
+      creditsRemaining: data.creditsRemaining,
+    };
   };
 }
 
