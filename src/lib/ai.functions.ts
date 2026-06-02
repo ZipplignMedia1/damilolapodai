@@ -205,7 +205,7 @@ export const runJsonPrompt = createServerFn({ method: "POST" })
       throw new Error(spendErr.message);
     }
 
-    return { result: parsed, creditsRemaining: (newBalance as number) ?? 0 };
+    return { result: parsed as Record<string, unknown>, creditsRemaining: (newBalance as number) ?? 0 };
   });
 
 // ───────── Director (Prompt / Story / Voice / Analyze) ─────────
@@ -386,14 +386,15 @@ export const runDirector = createServerFn({ method: "POST" })
       json,
     );
     const trimmed = cleanJsonText(raw);
-    let result: unknown;
+    let resultText: string | null = null;
+    let resultJson: Record<string, unknown> | null = null;
     if (json) {
       const parsed = tryParseJson(trimmed);
       if (!parsed) throw new Error("AI returned invalid JSON — no DPOD charged. Try again.");
-      result = parsed;
+      resultJson = parsed as Record<string, unknown>;
     } else {
       if (!trimmed) throw new Error("AI returned empty response — no DPOD charged. Try again.");
-      result = trimmed;
+      resultText = trimmed;
     }
 
     // 2. Spend credits only on success
@@ -406,5 +407,9 @@ export const runDirector = createServerFn({ method: "POST" })
       throw new Error(spendErr.message);
     }
 
-    return { result, creditsRemaining: (newBalance as number) ?? 0 };
+    return {
+      resultText,
+      resultJson,
+      creditsRemaining: (newBalance as number) ?? 0,
+    };
   });
