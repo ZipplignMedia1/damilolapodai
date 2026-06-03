@@ -1,11 +1,21 @@
-import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ImageIcon, Loader2, Sparkles, Coins, Wand2, Download } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  HelpCircle,
+  MoreVertical,
+  Plus,
+  ListPlus,
+  SlidersHorizontal,
+  Loader2,
+  Download,
+  Maximize2,
+  Coins,
+} from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { generateImage, type ImageType } from "@/lib/generation.functions";
 
@@ -25,18 +35,18 @@ export const Route = createFileRoute("/image")({
   component: ImagePage,
 });
 
-const ASPECTS = [
-  { id: "1:1", label: "Square 1:1" },
-  { id: "16:9", label: "Landscape 16:9" },
-  { id: "9:16", label: "Portrait 9:16" },
-] as const;
+const ASPECTS: { id: "1:1" | "16:9" | "9:16"; label: string }[] = [
+  { id: "1:1", label: "1:1" },
+  { id: "16:9", label: "16:9" },
+  { id: "9:16", label: "9:16" },
+];
 
 const IMAGE_TYPES: { id: ImageType; label: string }[] = [
   { id: "photo", label: "Photo" },
   { id: "face-portrait", label: "Portrait" },
   { id: "product", label: "Product" },
   { id: "illustration", label: "Illustration" },
-  { id: "graphic-design", label: "Graphic Design" },
+  { id: "graphic-design", label: "Graphic" },
   { id: "book-cover", label: "Book Cover" },
   { id: "flyer", label: "Flyer" },
   { id: "logo", label: "Logo" },
@@ -44,43 +54,37 @@ const IMAGE_TYPES: { id: ImageType; label: string }[] = [
 ];
 
 const MODELS = [
-  { id: "flux", label: "Flux (default)" },
-  { id: "flux-realism", label: "Flux Realism" },
-  { id: "flux-anime", label: "Flux Anime" },
-  { id: "flux-3d", label: "Flux 3D" },
-  { id: "turbo", label: "Turbo (fast)" },
+  { id: "flux", label: "Flux" },
+  { id: "flux-realism", label: "Realism" },
+  { id: "flux-anime", label: "Anime" },
+  { id: "flux-3d", label: "3D" },
+  { id: "turbo", label: "Turbo" },
 ] as const;
 
-type AspectId = typeof ASPECTS[number]["id"];
 type ModelId = typeof MODELS[number]["id"];
 
 function ImagePage() {
+  const nav = useNavigate();
   const [prompt, setPrompt] = useState("");
-  const [aspect, setAspect] = useState<AspectId>("1:1");
+  const [aspect, setAspect] = useState<"1:1" | "16:9" | "9:16">("1:1");
   const [type, setType] = useState<ImageType>("photo");
   const [model, setModel] = useState<ModelId>("flux");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ image: string; creditsRemaining: number } | null>(null);
-  const [outOfCredits, setOutOfCredits] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const qc = useQueryClient();
   const runGenerate = useServerFn(generateImage);
 
-  const cost = 2; // 2 DPOD per image
+  const cost = 2;
 
   async function handleGenerate() {
     if (!prompt.trim()) return toast.error("Enter an image prompt");
     setLoading(true);
     setResult(null);
-    setOutOfCredits(false);
-    const toastId = toast.loading(`Spending ${cost} DPOD · generating image…`);
+    const toastId = toast.loading(`Spending ${cost} DPOD · generating…`);
     try {
       const data = await runGenerate({
-        data: {
-          prompt: prompt.trim(),
-          aspectRatio: aspect,
-          type,
-          model,
-        },
+        data: { prompt: prompt.trim(), aspectRatio: aspect, type, model },
       });
       setResult(data);
       qc.invalidateQueries({ queryKey: ["my-profile"] });
@@ -88,7 +92,6 @@ function ImagePage() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Generation failed";
       if (msg.includes("INSUFFICIENT_CREDITS")) {
-        setOutOfCredits(true);
         toast.error("Not enough DPOD", { id: toastId });
       } else {
         toast.error(msg, { id: toastId });
@@ -107,140 +110,201 @@ function ImagePage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-bold">Image Generation</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Describe what you want — AI paints it for you.
+    <div className="fixed inset-0 flex flex-col bg-black text-white">
+      {/* Top bar */}
+      <header className="flex items-center justify-between px-3 py-3">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => nav({ to: "/home" })}
+            className="p-1.5 -ml-1 rounded-full hover:bg-white/10"
+            aria-label="Back"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <span className="text-base font-medium">Image</span>
+          <div className="flex items-center gap-0.5 ml-1">
+            <span className="h-1 w-1 rounded-full bg-white/70" />
+            <span className="h-1 w-1 rounded-full bg-white/70" />
+            <span className="h-1 w-1 rounded-full bg-white/70" />
+          </div>
+        </div>
+        <div className="flex items-center gap-1">
+          <button className="p-1.5 rounded-full hover:bg-white/10" aria-label="New">
+            <Plus className="h-5 w-5" />
+          </button>
+          <button className="p-1.5 rounded-full border border-white/30 hover:bg-white/10" aria-label="Help">
+            <HelpCircle className="h-4 w-4" />
+          </button>
+          <button className="p-1.5 rounded-full hover:bg-white/10" aria-label="More">
+            <MoreVertical className="h-5 w-5" />
+          </button>
+        </div>
+      </header>
+
+      {/* Canvas / empty state */}
+      <main className="flex-1 flex flex-col items-center justify-center px-6">
+        {loading ? (
+          <div className="flex flex-col items-center gap-4 text-white/60">
+            <Loader2 className="h-10 w-10 animate-spin" />
+            <p className="text-sm">Generating…</p>
+          </div>
+        ) : result?.image ? (
+          <div className="w-full max-w-md flex flex-col items-center gap-3">
+            <img src={result.image} alt="Generated" className="w-full rounded-2xl" />
+            <button
+              onClick={handleDownload}
+              className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-medium hover:bg-white/15"
+            >
+              <Download className="h-4 w-4" /> Download
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-6 text-center">
+            <PixelFlower />
+            <p className="text-xl text-white/70 font-light leading-tight">
+              Start creating
+              <br />
+              or drop media
             </p>
           </div>
-          <div className="flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1.5 text-xs font-medium text-primary">
-            <ImageIcon className="h-3.5 w-3.5" /> AI Image
-          </div>
-        </div>
-
-        <div className="mt-4">
-          <label className="text-sm font-semibold">Prompt</label>
-          <Textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder="e.g. A Nigerian woman in traditional Aso Oke fabric, standing under a palm tree at golden hour, photorealistic"
-            className="mt-2 min-h-[100px] rounded-xl"
-          />
-        </div>
-
-        {/* Image Type */}
-        <div className="mt-4">
-          <label className="text-sm font-semibold">Style</label>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {IMAGE_TYPES.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => setType(t.id)}
-                className={`rounded-lg border px-2.5 py-1 text-[11px] font-medium transition ${
-                  type === t.id
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-background text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Aspect Ratio */}
-        <div className="mt-4">
-          <label className="text-sm font-semibold">Aspect Ratio</label>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {ASPECTS.map((a) => (
-              <button
-                key={a.id}
-                onClick={() => setAspect(a.id)}
-                className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
-                  aspect === a.id
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-background text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {a.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Model */}
-        <div className="mt-4">
-          <label className="text-sm font-semibold">Model</label>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {MODELS.map((m) => (
-              <button
-                key={m.id}
-                onClick={() => setModel(m.id)}
-                className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
-                  model === m.id
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-background text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {m.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <Button
-        onClick={handleGenerate}
-        disabled={loading || !prompt.trim()}
-        className="w-full h-14 rounded-xl text-base font-bold"
-      >
-        {loading ? (
-          <>
-            <Loader2 className="h-5 w-5 animate-spin" /> Generating…
-          </>
-        ) : (
-          <>
-            <Sparkles className="h-5 w-5" /> Generate · {cost} DPOD
-          </>
         )}
-      </Button>
+      </main>
 
-      {outOfCredits && (
-        <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-4 text-sm">
-          <div className="flex items-center gap-2 font-semibold text-destructive">
-            <Coins className="h-4 w-4" /> Out of DPOD
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            You don't have enough DPOD to generate this image.
-          </p>
-          <Link
-            to="/topup"
-            className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground"
-          >
-            <Wand2 className="h-3.5 w-3.5" /> Top up DPOD
-          </Link>
-        </div>
-      )}
-
-      {result?.image && (
-        <div className="rounded-2xl border border-border bg-card p-3 shadow-sm">
-          <img
-            src={result.image}
-            alt="Generated"
-            className="w-full rounded-xl"
+      {/* Settings panel (collapsible) */}
+      {showSettings && (
+        <div className="px-4 pb-2 space-y-3">
+          <Chips label="Style" items={IMAGE_TYPES} value={type} onChange={(v) => setType(v as ImageType)} />
+          <Chips
+            label="Aspect"
+            items={ASPECTS}
+            value={aspect}
+            onChange={(v) => setAspect(v as "1:1" | "16:9" | "9:16")}
           />
-          <Button
-            onClick={handleDownload}
-            variant="outline"
-            className="mt-3 w-full rounded-xl"
-          >
-            <Download className="h-4 w-4" /> Download
-          </Button>
+          <Chips label="Model" items={MODELS as readonly { id: string; label: string }[]} value={model} onChange={(v) => setModel(v as ModelId)} />
         </div>
       )}
+
+      {/* Bottom composer */}
+      <footer className="p-3 pb-5">
+        <div className="rounded-3xl bg-[#1c1c1e] border border-white/5 px-3 pt-3 pb-2">
+          <div className="flex items-start gap-2">
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="What do you want to create?"
+              rows={2}
+              className="flex-1 bg-transparent text-[15px] text-white placeholder:text-white/40 resize-none outline-none px-2 pt-1"
+            />
+            <button
+              onClick={() => setShowSettings((s) => !s)}
+              className="p-1 -mt-0.5 text-white/50 hover:text-white"
+              aria-label="Expand"
+            >
+              <Maximize2 className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="mt-2 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <button
+                className="h-9 w-9 rounded-full border border-white/15 flex items-center justify-center hover:bg-white/5"
+                aria-label="Add"
+              >
+                <Plus className="h-5 w-5" />
+              </button>
+              <button className="h-9 px-4 rounded-full bg-white text-black text-sm font-medium hover:bg-white/90">
+                {type === "photo" ? "Photo" : IMAGE_TYPES.find((t) => t.id === type)?.label ?? "Agent"}
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowSettings((s) => !s)}
+                className="text-white/70 hover:text-white"
+                aria-label="Style"
+              >
+                <ListPlus className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => setShowSettings((s) => !s)}
+                className="text-white/70 hover:text-white"
+                aria-label="Settings"
+              >
+                <SlidersHorizontal className="h-5 w-5" />
+              </button>
+              <button
+                onClick={handleGenerate}
+                disabled={loading || !prompt.trim()}
+                className="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center text-white/60 disabled:opacity-40 enabled:hover:bg-white enabled:hover:text-black transition"
+                aria-label="Generate"
+              >
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <p className="mt-2 text-center text-[11px] text-white/40 flex items-center justify-center gap-1.5">
+          <Coins className="h-3 w-3" /> {cost} DPOD per image · AI can make mistakes
+        </p>
+      </footer>
+    </div>
+  );
+}
+
+function Chips({
+  label,
+  items,
+  value,
+  onChange,
+}: {
+  label: string;
+  items: readonly { id: string; label: string }[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div>
+      <div className="text-[11px] uppercase tracking-wide text-white/40 mb-1.5 px-1">{label}</div>
+      <div className="flex flex-wrap gap-1.5">
+        {items.map((it) => (
+          <button
+            key={it.id}
+            onClick={() => onChange(it.id)}
+            className={`px-3 py-1 rounded-full text-xs font-medium border transition ${
+              value === it.id
+                ? "bg-white text-black border-white"
+                : "bg-transparent text-white/70 border-white/15 hover:text-white"
+            }`}
+          >
+            {it.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PixelFlower() {
+  // Pixel-art flower icon (8-bit style)
+  const px = "bg-white";
+  const __ = "bg-transparent";
+  const rows = [
+    [__, __, px, px, __, px, px, __, __],
+    [__, px, __, __, px, __, __, px, __],
+    [px, __, px, px, __, px, px, __, px],
+    [px, __, px, __, px, __, px, __, px],
+    [__, px, __, px, px, px, __, px, __],
+    [__, __, px, __, px, __, px, __, __],
+    [__, __, __, __, px, __, __, __, __],
+    [__, __, __, __, px, __, __, __, __],
+    [__, __, __, px, px, px, __, __, __],
+  ];
+  return (
+    <div className="grid grid-cols-9 gap-[3px]">
+      {rows.flat().map((c, i) => (
+        <span key={i} className={`h-2.5 w-2.5 ${c}`} />
+      ))}
     </div>
   );
 }
